@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       vorm: path.resolve(__dirname, "../vorm/src"),
+      "vorm/components": path.resolve(__dirname, "../vorm/src/components"),
     },
   },
 });

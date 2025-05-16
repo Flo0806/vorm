@@ -12,7 +12,8 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "vorm": ["../vorm/src"]
+      "vorm": ["../vorm/src"],
+      "vorm/components": ["../vorm/src/components"]
     },
     "types": ["vite/client"]
   },

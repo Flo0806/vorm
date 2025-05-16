@@ -1,33 +1,64 @@
 <script setup lang="ts">
-import HelloWorld from "./components/HelloWorld.vue";
-import { helloVorm } from "vorm";
+import VormInput from "./components/VormInput.vue";
+import { useVorm, type FormSchema } from "vorm";
+import { VormProvider } from "vorm/components";
 
-helloVorm();
+const contextKey1 = Symbol("Form1");
+const contextKey2 = Symbol("Form2");
+
+const schema: FormSchema = [
+  { name: "firstName", type: "text", label: "First Name" },
+  {
+    name: "email",
+    type: "email",
+    label: "Email",
+    validation: [{ rule: "required", message: "Email required" }],
+  },
+];
+
+const schema2: FormSchema = [
+  { name: "firstName", type: "text", label: "First Name" },
+  {
+    name: "email",
+    type: "email",
+    label: "Email",
+    validation: [{ rule: "required", message: "Email required" }],
+  },
+];
+
+const { formData, errors, validate } = useVorm(schema, {
+  key: contextKey1,
+});
+
+const test2 = useVorm(schema2, { key: contextKey2 });
+
+function onSubmit() {
+  if (validate()) {
+    console.log("Valid data:", formData);
+  } else {
+    console.log("Errors:", errors);
+  }
+
+  if (test2.validate()) {
+    console.log("Valid data:", test2.formData);
+  } else {
+    console.log("Errors:", test2.errors);
+  }
+}
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <VormProvider :contextKey="contextKey1" v-model="formData">
+    <input v-model="formData.firstName" placeholder="First Name" />
+    <VormInput :contextKey="contextKey1" name="email" placeholder="Email" />
+    <button @click="onSubmit">Submit</button>
+  </VormProvider>
+
+  <VormProvider :contextKey="contextKey2" v-model="test2.formData">
+    <input v-model="test2.formData.firstName" placeholder="First Name" />
+    <VormInput :contextKey="contextKey2" name="email" placeholder="Email" />
+    <button @click="onSubmit">Submit</button>
+  </VormProvider>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
+<style scoped></style>
