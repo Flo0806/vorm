@@ -1,0 +1,15 @@
+# Node modules and lockfile
+node_modules
+.pnpm-store
+*.log
+dist
+.cache
+.temp
+
+# IDEs
+.vscode
+.idea
+
+# System Files
+.DS_Store
+Thumbs.db
