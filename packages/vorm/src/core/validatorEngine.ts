@@ -1,17 +1,45 @@
-import type { FormSchema, FormFieldSchema } from "../types/schemaTypes";
+// export function validateField(
+//   field: FormFieldSchema,
+//   formData: Record<string, any>
+// ): string | null {
+//   const value = formData[field.name];
+
+//   if (!field.validation) return null;
+
+//   for (const rule of field.validation) {
+//     const result = applyRule(rule, value, formData);
+//     if (result) return result; // first error stops further checks
+//   }
+
+//   return null;
+// }
+
+import type { FormFieldSchema } from "../types/schemaTypes";
 import type { ValidationRule } from "../types/validatorTypes";
 
 export function validateField(
   field: FormFieldSchema,
-  formData: Record<string, any>
+  formData: Record<string, any>,
+  allErrors: Record<string, string | null>
 ): string | null {
   const value = formData[field.name];
-
   if (!field.validation) return null;
 
   for (const rule of field.validation) {
     const result = applyRule(rule, value, formData);
-    if (result) return result; // first error stops further checks
+    if (result) {
+      // Set error on the field
+      allErrors[field.name] = result;
+
+      // Set error on affected fields, too
+      if (rule.affects) {
+        rule.affects.forEach((affectedField) => {
+          allErrors[affectedField] = result;
+        });
+      }
+
+      return result; // Stop after the first error
+    }
   }
 
   return null;

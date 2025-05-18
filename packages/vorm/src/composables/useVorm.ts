@@ -26,7 +26,7 @@ export function useVorm(
   function validate() {
     let isValid = true;
     schema.forEach((field) => {
-      const error = validateField(field, formData);
+      const error = validateField(field, formData, errors);
       errors[field.name] = error;
       if (error) isValid = false;
     });
