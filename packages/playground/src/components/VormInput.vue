@@ -4,18 +4,22 @@ import { useFormContext } from "vorm";
 const props = defineProps<{
   name: string;
   placeholder?: string;
-  contextKey: symbol;
 }>();
 
-const { formData, errors } = useFormContext(props.contextKey);
-console.log("Form data:", formData);
+// Holt automatisch den nächsten Context
+const { formData, errors } = useFormContext();
 </script>
 
 <template>
   <div>
-    <input v-model="formData[props.name]" :placeholder="props.placeholder" />
-    <div v-if="errors[props.name]" class="text-red-500">
-      {{ errors[props.name] }}
-    </div>
+    <input
+      v-model="formData[props.name]"
+      :placeholder="props.placeholder"
+      :name="props.name"
+      :class="{ 'error-border': errors[props.name] }"
+    />
+    <span v-if="errors[props.name]" class="error-message">{{
+      errors[props.name]
+    }}</span>
   </div>
 </template>

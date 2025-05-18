@@ -35,13 +35,13 @@ function onSubmit() {
   <h3>Context Key 1 (Form1)</h3>
   <VormProvider :contextKey="contextKey1" v-model="formData">
     <input v-model="formData.firstName" placeholder="First Name" />
-    <VormInput :contextKey="contextKey1" name="email" placeholder="Email" />
+    <VormInput name="email" placeholder="Email" />
   </VormProvider>
   <hr />
   <h3>Context Key 2 (Form2)</h3>
   <VormProvider :contextKey="contextKey2" v-model="test2.formData">
     <input v-model="test2.formData.firstName" placeholder="First Name" />
-    <VormInput :contextKey="contextKey2" name="email" placeholder="Email" />
+    <VormInput name="email" placeholder="Email" />
   </VormProvider>
 
   <button @click="onSubmit" style="margin-top: 1rem">Submit Both</button>

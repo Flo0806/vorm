@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { inject, provide, InjectionKey } from "vue";
+import { ref, onMounted, inject, provide, InjectionKey } from "vue";
 import type { VormContext } from "../composables/useVorm";
-import { VormContextKey } from "../core/formContext";
+import { VormContextKey, VormActiveContextKey } from "../core/vormContext";
 
 const props = defineProps<{
   contextKey?: symbol | string;
@@ -10,22 +10,49 @@ const props = defineProps<{
 
 const key = props.contextKey || VormContextKey;
 
-// Hole den Context, der vorher mit useVorm bereitgestellt wurde
+// Context holen
 const context = inject<VormContext>(key as InjectionKey<VormContext>);
-
 if (!context) {
   throw new Error(`[Vorm] No context provided for key: ${String(key)}`);
 }
 
-// Synchronisiere die Anfangswerte
+// Model synchronisieren
 Object.keys(props.modelValue).forEach((fieldKey) => {
   context.formData[fieldKey] = props.modelValue[fieldKey];
 });
 
-// Stelle ihn für alle Kinder erneut bereit
+// Context bereitstellen
 provide(key as InjectionKey<VormContext>, context);
+
+// New get the current key
+provide(VormActiveContextKey, key);
+
+// DOM Zugriff vorbereiten
+const wrapperRef = ref<HTMLElement | null>(null);
+
+onMounted(() => {
+  const inputs = wrapperRef.value?.querySelectorAll("[name]");
+  if (!inputs) return;
+
+  inputs.forEach((input) => {
+    const name = input.getAttribute("name");
+    if (!name) return;
+
+    const mode = context.getValidationMode(name);
+
+    if (mode === "onInput") {
+      input.addEventListener("input", () => context.validateFieldByName(name));
+    }
+
+    if (mode === "onBlur") {
+      input.addEventListener("blur", () => context.validateFieldByName(name));
+    }
+  });
+});
 </script>
 
 <template>
-  <slot />
+  <div ref="wrapperRef">
+    <slot />
+  </div>
 </template>

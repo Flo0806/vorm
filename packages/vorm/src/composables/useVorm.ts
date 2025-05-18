@@ -1,23 +1,26 @@
-import { ref, reactive, computed, provide, InjectionKey } from "vue";
-import type { FormSchema } from "../types/schemaTypes";
-import { validateField } from "../core/validatorEngine.js";
-import { VormContextKey } from "../core/formContext.js";
+import { reactive, provide, InjectionKey } from "vue";
+import type { FormSchema, ValidationMode } from "../types/schemaTypes";
+import { validateField } from "../core/validatorEngine";
+import { VormContextKey } from "../core/vormContext";
 
 export interface VormContext {
   schema: FormSchema;
   formData: Record<string, any>;
   errors: Record<string, string | null>;
   validate: () => boolean;
+  validateFieldByName: (fieldName: string) => void;
+  getValidationMode: (fieldName: string) => ValidationMode;
 }
 
 export function useVorm(
   schema: FormSchema,
-  options?: { key?: string | symbol }
+  options?: { validationMode?: ValidationMode; key?: symbol | string }
 ) {
   const formData = reactive<Record<string, any>>({});
   const errors = reactive<Record<string, string | null>>({});
 
-  // Initialize emtpy values
+  const globalValidationMode = options?.validationMode || "onSubmit";
+
   schema.forEach((field) => {
     formData[field.name] = "";
     errors[field.name] = null;
@@ -27,21 +30,33 @@ export function useVorm(
     let isValid = true;
     schema.forEach((field) => {
       const error = validateField(field, formData, errors);
-      errors[field.name] = error;
       if (error) isValid = false;
     });
     return isValid;
   }
 
-  const key = options?.key || VormContextKey;
+  function validateFieldByName(fieldName: string) {
+    const field = schema.find((f) => f.name === fieldName);
+    if (field) {
+      validateField(field, formData, errors);
+    }
+  }
+
+  function getValidationMode(fieldName: string): ValidationMode {
+    const field = schema.find((f) => f.name === fieldName);
+    return field?.validationMode || globalValidationMode;
+  }
 
   const context: VormContext = {
     schema,
     formData,
     errors,
     validate,
+    validateFieldByName,
+    getValidationMode,
   };
 
+  const key = options?.key || VormContextKey;
   provide(key as InjectionKey<VormContext>, context);
 
   return context;
