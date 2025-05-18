@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      vorm-root:
+        specifier: 'file:'
+        version: 'file:'
 
   packages/playground:
     dependencies:
@@ -34,6 +38,10 @@ importers:
         version: 2.2.10(typescript@5.8.3)
 
   packages/vorm:
+    dependencies:
+      vorm:
+        specifier: 'file:'
+        version: 'link:'
     devDependencies:
       '@types/node':
         specifier: ^22.15.18
@@ -530,6 +538,9 @@ packages:
       yaml:
         optional: true
 
+  'vorm-root@file:':
+    resolution: {directory: '', type: directory}
+
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
 
@@ -924,6 +935,8 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.15.18
       fsevents: 2.3.3
+
+  'vorm-root@file:': {}
 
   vscode-uri@3.1.0: {}
 

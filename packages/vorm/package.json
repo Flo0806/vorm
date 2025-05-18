@@ -3,6 +3,16 @@
   "version": "0.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./components": {
+      "import": "./dist/components/index.js",
+      "types": "./dist/components/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build"
@@ -14,5 +24,8 @@
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vue": "^3.5.14"
+  },
+  "dependencies": {
+    "vorm": "file:"
   }
 }

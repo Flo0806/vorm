@@ -9,7 +9,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "vorm": ["../vorm/src"],
+      "vorm/components": ["../vorm/src/components"]
+    }
   },
   "include": ["src"]
 }
