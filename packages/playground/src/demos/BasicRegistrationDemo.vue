@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { VormProvider } from "vorm/components";
-import { matchField, useVorm, type FormSchema } from "vorm";
+import { matchField, useVorm, type VormSchema } from "vorm";
 
-const registrationSchema: FormSchema = [
+const registrationSchema: VormSchema = [
   {
     name: "firstName",
     type: "text",

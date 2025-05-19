@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { VormProvider } from "vorm/components";
-import { useVorm, type FormSchema } from "vorm";
+import { useVorm, type VormSchema } from "vorm";
 
-const schema: FormSchema = [
+const schema: VormSchema = [
   {
     name: "email",
     type: "email",

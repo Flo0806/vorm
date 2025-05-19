@@ -1,10 +1,10 @@
 import { reactive, provide, InjectionKey } from "vue";
-import type { FormSchema, ValidationMode } from "../types/schemaTypes";
+import type { VormSchema, ValidationMode } from "../types/schemaTypes";
 import { validateField } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
 
 export interface VormContext {
-  schema: FormSchema;
+  schema: VormSchema;
   formData: Record<string, any>;
   errors: Record<string, string | null>;
   validate: () => boolean;
@@ -13,7 +13,7 @@ export interface VormContext {
 }
 
 export function useVorm(
-  schema: FormSchema,
+  schema: VormSchema,
   options?: { validationMode?: ValidationMode; key?: symbol | string }
 ) {
   const formData = reactive<Record<string, any>>({});

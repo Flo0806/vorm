@@ -2,7 +2,7 @@ import { inject, InjectionKey } from "vue";
 import { VormActiveContextKey, VormContextKey } from "../core/vormContext.js";
 import { VormContext } from "./useVorm.js";
 
-export function useFormContext(key?: symbol | string): VormContext {
+export function useVormContext(key?: symbol | string): VormContext {
   const providedKey = inject(VormActiveContextKey, VormContextKey); // Holt _aktuellen_ Key oder fallback
 
   const activeKey = key || providedKey;

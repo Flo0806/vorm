@@ -30,4 +30,4 @@ export interface FormFieldSchema {
 /**
  * Defines the entire form schema
  */
-export type FormSchema = FormFieldSchema[];
+export type VormSchema = FormFieldSchema[];

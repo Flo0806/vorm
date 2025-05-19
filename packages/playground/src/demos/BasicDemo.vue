@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import VormInput from "../components/VormInput.vue";
-import { useVorm, type FormSchema } from "vorm";
+import { useVorm, type VormSchema } from "vorm";
 import { VormProvider } from "vorm/components";
 
 const contextKey1 = Symbol("Form1");
 const contextKey2 = Symbol("Form2");
 
-const schema1: FormSchema = [
+const schema1: VormSchema = [
   { name: "firstName", type: "text", label: "First Name" },
   { name: "email", type: "email", label: "Email" },
 ];
 
-const schema2: FormSchema = [
+const schema2: VormSchema = [
   { name: "firstName", type: "text", label: "First Name" },
   { name: "email", type: "email", label: "Email" },
 ];

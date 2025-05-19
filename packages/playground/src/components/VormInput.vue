@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useFormContext } from "vorm";
+import { useVormContext } from "vorm";
 
 const props = defineProps<{
   name: string;
@@ -7,7 +7,7 @@ const props = defineProps<{
 }>();
 
 // Holt automatisch den nächsten Context
-const { formData, errors } = useFormContext();
+const { formData, errors } = useVormContext();
 </script>
 
 <template>
