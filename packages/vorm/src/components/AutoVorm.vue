@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, useSlots, onMounted, h } from "vue";
 import { useVormContext } from "../composables/useVormContext";
-import type { FormFieldSchema, VormSchema } from "../types/schemaTypes";
+import type {
+  FieldState,
+  FormFieldSchema,
+  VormSchema,
+} from "../types/schemaTypes";
 
 const props = defineProps<{
   schema: VormSchema;
@@ -29,7 +33,6 @@ const validFieldNames = computed(() =>
   )
 );
 
-//#region Helpers
 function getFieldConfig(name: string): FormFieldSchema {
   return (
     props.schema.find((f) => f.name === name) || {
@@ -44,32 +47,40 @@ function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
-const fieldStates = computed(() => {
-  return Object.fromEntries(
+const fieldStates = computed(() =>
+  Object.fromEntries(
     validFieldNames.value.map((fieldName) => {
       const mode = vorm.getValidationMode(fieldName);
       const error = vorm.errors[fieldName];
       const value = vorm.formData[fieldName];
       const hasValue = value !== "" && value != null;
       const wasValidated = vorm.validatedFields?.[fieldName] === true;
+      const touched = vorm.touched?.[fieldName] === true;
+      const dirty = vorm.dirty?.[fieldName] === true;
+      const initial = vorm.initial?.[fieldName];
 
       const state: FieldState = {
         error,
         valid: !error && hasValue && wasValidated,
         invalid: !!error && wasValidated,
         validationMode: mode,
-        classes: !wasValidated
-          ? ""
-          : error
-          ? "vorm-invalid"
-          : hasValue
-          ? "vorm-valid"
-          : "",
+        touched,
+        dirty,
+        initialValue: initial,
+        classes: [
+          wasValidated && error ? "vorm-invalid" : "",
+          wasValidated && !error && hasValue ? "vorm-valid" : "",
+          touched ? "vorm-touched" : "",
+          dirty ? "vorm-dirty" : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       };
+
       return [fieldName, state];
     })
-  );
-});
+  )
+);
 
 function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   const mode = vorm.getValidationMode(fieldName);
@@ -80,13 +91,8 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
 
 function parseWrapperSlotNames(slotName: string): string[] {
   if (!slotName.startsWith("wrapper:")) return [];
-
   const raw = slotName.slice(8);
-
-  // remove brackets and spaces
   const cleaned = raw.replace(/[\[\]\s]/g, "");
-
-  // Split by : or ,
   return cleaned.split(/[:,]/);
 }
 
@@ -102,166 +108,139 @@ function getWrapperSlotName(fieldName: string): string {
     if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
     return parseWrapperSlotNames(name).includes(fieldName);
   });
-
   return match || "wrapper";
 }
-//#endregion
+
+function renderDefaultInput(fieldName: string) {
+  return h("input", {
+    id: fieldName,
+    name: fieldName,
+    type: getFieldConfig(fieldName).type,
+    class: ["input", fieldStates.value[fieldName].classes],
+    value: vorm.formData[fieldName],
+    onInput: (e: any) => {
+      const newValue = e.target.value;
+      vorm.formData[fieldName] = newValue;
+      vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
+      maybeValidate("onInput", fieldName);
+    },
+    onBlur: () => {
+      vorm.touched[fieldName] = true;
+      maybeValidate("onBlur", fieldName);
+    },
+  });
+}
+
+function renderFieldContent(fieldName: string) {
+  if (hasSlot(fieldName)) {
+    return h(
+      "div",
+      {},
+      slots[fieldName]?.({
+        field: getFieldConfig(fieldName),
+        state: fieldStates.value[fieldName],
+      })
+    );
+  }
+  return renderDefaultInput(fieldName);
+}
 
 onMounted(() => {
-  const slotNames = Object.keys(slots);
-  slotNames.forEach((slotName) => {
-    const clean = slotName.replace(/^before-|^after-/, "");
-    const exists = props.schema.find((f) => f.name === clean);
-    if (!exists && slotName !== "wrapper") {
-      console.error(
-        `[AutoVorm] Slot "${slotName}" does not match any field in schema.`
-      );
-    }
+  Object.keys(slots).forEach((slotName) => {
+    const name = slotName.startsWith("#") ? slotName.slice(1) : slotName;
+    const raw = name
+      .replace(/^before-/, "")
+      .replace(/^after-/, "")
+      .replace(/^wrapper:/, "")
+      .replace(/[\[\]\s]/g, "");
+    const fieldCandidates = raw.split(/[:,]/).map((n) => n.trim());
+
+    fieldCandidates.forEach((field) => {
+      const exists = props.schema.some((f) => f.name === field);
+      if (!exists) {
+        console.error(
+          `[AutoVorm] Slot "${slotName}" does not match any field in schema.`
+        );
+      }
+    });
   });
 });
-
-interface FieldState {
-  error: string | null;
-  valid: boolean;
-  invalid: boolean;
-  validationMode: "onInput" | "onBlur" | "onSubmit";
-  classes: string;
-}
 </script>
 
 <template>
   <div :class="gridClass || defaultGridClass">
     <template v-for="fieldName in validFieldNames" :key="fieldName">
-      <template v-if="hasSlot(`before-${fieldName}`)">
-        <slot :name="`before-${fieldName}`" />
-      </template>
+      <slot
+        v-if="hasSlot(`before-${fieldName}`)"
+        :name="`before-${fieldName}`"
+      />
 
-      <!-- wrapper:fieldName -->
-      <template v-if="hasSlot(`wrapper:${fieldName}`)">
-        <slot
-          :name="`wrapper:${fieldName}`"
-          :field="getFieldConfig(fieldName)"
-          :state="fieldStates[fieldName]"
-          :content="() => {
-            if (hasSlot(fieldName)) {
-              return h('div', {}, slots[fieldName]?.({
-                field: getFieldConfig(fieldName),
-                state: fieldStates[fieldName]
-              }))
-            }
+      <slot
+        v-if="hasSlot(`wrapper:${fieldName}`)"
+        :name="`wrapper:${fieldName}`"
+        :field="getFieldConfig(fieldName)"
+        :state="fieldStates[fieldName]"
+        :content="() => renderFieldContent(fieldName)"
+      />
 
-            return h('input', {
-              id: fieldName,
-              name: fieldName,
-              type: getFieldConfig(fieldName).type,
-              class: ['input', fieldStates[fieldName].classes],
-              value: vorm.formData[fieldName],
-              onInput: (e: any) => {
-                vorm.formData[fieldName] = e.target.value
-                maybeValidate('onInput', fieldName)
-              },
-              onBlur: () => maybeValidate('onBlur', fieldName)
-            })
-          }"
-        />
-      </template>
+      <slot
+        v-else-if="hasSlotMatchingWrapperMulti(fieldName)"
+        :name="getWrapperSlotName(fieldName)"
+        :field="getFieldConfig(fieldName)"
+        :state="fieldStates[fieldName]"
+        :content="() => renderFieldContent(fieldName)"
+      />
 
-      <!-- wrapper:[field1,field2] -->
-      <template v-else-if="hasSlotMatchingWrapperMulti(fieldName)">
-        <slot
-          :name="getWrapperSlotName(fieldName)"
-          :field="getFieldConfig(fieldName)"
-          :state="fieldStates[fieldName]"
-          :content="() => {
-            if (hasSlot(fieldName)) {
-              return h('div', {}, slots[fieldName]?.({
-                field: getFieldConfig(fieldName),
-                state: fieldStates[fieldName]
-              }))
-            }
+      <slot
+        v-else-if="hasSlot('wrapper')"
+        name="wrapper"
+        :field="getFieldConfig(fieldName)"
+        :state="fieldStates[fieldName]"
+        :content="() => renderFieldContent(fieldName)"
+      />
 
-            return h('input', {
-              id: fieldName,
-              name: fieldName,
-              type: getFieldConfig(fieldName).type,
-              class: ['input', fieldStates[fieldName].classes],
-              value: vorm.formData[fieldName],
-              onInput: (e: any) => {
-                vorm.formData[fieldName] = e.target.value
-                maybeValidate('onInput', fieldName)
-              },
-              onBlur: () => maybeValidate('onBlur', fieldName)
-            })
-          }"
-        />
-      </template>
+      <div v-else :class="fieldWrapperClass || 'flex flex-col gap-1'">
+        <template v-if="hasSlot(fieldName)">
+          <slot
+            :name="fieldName"
+            :field="getFieldConfig(fieldName)"
+            :state="fieldStates[fieldName]"
+          />
+        </template>
+        <template v-else>
+          <label :for="fieldName">
+            {{ getFieldConfig(fieldName).label || fieldName }}
+          </label>
+          <input
+            :id="fieldName"
+            :name="fieldName"
+            :type="getFieldConfig(fieldName).type || 'text'"
+            :class="['input', fieldStates[fieldName].classes]"
+            :value="vorm.formData[fieldName]"
+            @input="(e: any) => {
+    const newValue = e.target.value;
+    vorm.formData[fieldName] = newValue;
+    vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
+    maybeValidate('onInput', fieldName);
+  }"
+            @blur="
+              () => {
+                vorm.touched[fieldName] = true;
+                maybeValidate('onBlur', fieldName);
+              }
+            "
+          />
 
-      <!-- global wrapper -->
-      <template v-else-if="hasSlot('wrapper')">
-        <slot
-          name="wrapper"
-          :field="getFieldConfig(fieldName)"
-          :state="fieldStates[fieldName]"
-          :content="() => {
-            if (hasSlot(fieldName)) {
-              return h('div', {}, slots[fieldName]?.({
-                field: getFieldConfig(fieldName),
-                state: fieldStates[fieldName]
-              }))
-            }
+          <p
+            v-if="props.showError !== false && fieldStates[fieldName].error"
+            class="text-red-500 text-sm"
+          >
+            {{ fieldStates[fieldName].error }}
+          </p>
+        </template>
+      </div>
 
-            return h('input', {
-              id: fieldName,
-              name: fieldName,
-              type: getFieldConfig(fieldName).type,
-              class: ['input', fieldStates[fieldName].classes],
-              value: vorm.formData[fieldName],
-              onInput: (e: any) => {
-                vorm.formData[fieldName] = e.target.value
-                maybeValidate('onInput', fieldName)
-              },
-              onBlur: () => maybeValidate('onBlur', fieldName)
-            })
-          }"
-        />
-      </template>
-
-      <!-- default rendering -->
-      <template v-else>
-        <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
-          <template v-if="hasSlot(fieldName)">
-            <slot
-              :name="fieldName"
-              :field="getFieldConfig(fieldName)"
-              :state="fieldStates[fieldName]"
-            />
-          </template>
-          <template v-else>
-            <label :for="fieldName">{{
-              getFieldConfig(fieldName).label || fieldName
-            }}</label>
-            <input
-              :id="fieldName"
-              :name="fieldName"
-              :type="getFieldConfig(fieldName).type || 'text'"
-              :class="['input', fieldStates[fieldName].classes]"
-              v-model="vorm.formData[fieldName]"
-              @input="maybeValidate('onInput', fieldName)"
-              @blur="maybeValidate('onBlur', fieldName)"
-            />
-            <p
-              v-if="props.showError !== false && fieldStates[fieldName].error"
-              class="text-red-500 text-sm"
-            >
-              {{ fieldStates[fieldName].error }}
-            </p>
-          </template>
-        </div>
-      </template>
-
-      <template v-if="hasSlot(`after-${fieldName}`)">
-        <slot :name="`after-${fieldName}`" />
-      </template>
+      <slot v-if="hasSlot(`after-${fieldName}`)" :name="`after-${fieldName}`" />
     </template>
   </div>
 </template>

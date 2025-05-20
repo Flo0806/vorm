@@ -36,6 +36,9 @@ export interface FieldState {
   error: string | null;
   valid: boolean;
   invalid: boolean;
-  validationMode: ValidationMode;
+  validationMode: "onInput" | "onBlur" | "onSubmit";
   classes: string;
+  touched: boolean;
+  dirty: boolean;
+  initialValue: any;
 }

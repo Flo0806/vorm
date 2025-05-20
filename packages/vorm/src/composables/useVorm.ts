@@ -8,6 +8,9 @@ export interface VormContext {
   formData: Record<string, any>;
   errors: Record<string, string | null>;
   validatedFields: Record<string, boolean>;
+  touched: Record<string, boolean>;
+  dirty: Record<string, boolean>;
+  initial: Record<string, any>;
   validate: () => boolean;
   validateFieldByName: (fieldName: string) => void;
   getValidationMode: (fieldName: string) => ValidationMode;
@@ -23,10 +26,17 @@ export function useVorm(
 
   const globalValidationMode = options?.validationMode || "onSubmit";
 
+  const touched = reactive<Record<string, boolean>>({});
+  const dirty = reactive<Record<string, boolean>>({});
+  const initial = reactive<Record<string, any>>({});
+
   schema.forEach((field) => {
-    formData[field.name] = "";
-    errors[field.name] = null;
-    validatedFields[field.name] = false;
+    const name = field.name;
+    formData[name] = "";
+    errors[name] = null;
+    touched[name] = false;
+    dirty[name] = false;
+    initial[name] = "";
   });
 
   function validate(): boolean {
@@ -62,6 +72,9 @@ export function useVorm(
     formData,
     errors,
     validatedFields,
+    touched,
+    dirty,
+    initial,
     validate,
     validateFieldByName,
     getValidationMode,

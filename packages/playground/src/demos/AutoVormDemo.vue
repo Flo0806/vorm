@@ -55,7 +55,7 @@ function onSubmit() {
         Bitte gib deine geschäftliche E-Mail-Adresse an.
       </p>
     </template>
-    <template v-slot:wrapper:[email]="{ field, content, state }">
+    <template #wrapper:[email]="{ field, content, state }">
       <div class="p-4 border rounded" :class="state.classes">
         <label :for="field.name">Hier: {{ field.label }}</label>
         <component :is="content()" />
