@@ -50,9 +50,13 @@ function onSubmit() {
   </AutoVorm> -->
 
   <AutoVorm :schema="schema" :showError="false">
-    <template #wrapper="{ field, content, state }">
+    <template #before-email>
+      <p class="text-xs text-blue-700 italic mb-2">
+        Bitte gib deine geschäftliche E-Mail-Adresse an.
+      </p>
+    </template>
+    <template v-slot:wrapper:[email]="{ field, content, state }">
       <div class="p-4 border rounded" :class="state.classes">
-        <!-- Du übernimmst 100% Kontrolle -->
         <label :for="field.name">Hier: {{ field.label }}</label>
         <component :is="content()" />
         <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>

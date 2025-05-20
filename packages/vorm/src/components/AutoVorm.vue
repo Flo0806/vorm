@@ -29,6 +29,7 @@ const validFieldNames = computed(() =>
   )
 );
 
+//#region Helpers
 function getFieldConfig(name: string): FormFieldSchema {
   return (
     props.schema.find((f) => f.name === name) || {
@@ -77,6 +78,35 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   }
 }
 
+function parseWrapperSlotNames(slotName: string): string[] {
+  if (!slotName.startsWith("wrapper:")) return [];
+
+  const raw = slotName.slice(8);
+
+  // remove brackets and spaces
+  const cleaned = raw.replace(/[\[\]\s]/g, "");
+
+  // Split by : or ,
+  return cleaned.split(/[:,]/);
+}
+
+function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
+  return Object.keys(slots).some((name) => {
+    if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
+    return parseWrapperSlotNames(name).includes(fieldName);
+  });
+}
+
+function getWrapperSlotName(fieldName: string): string {
+  const match = Object.keys(slots).find((name) => {
+    if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
+    return parseWrapperSlotNames(name).includes(fieldName);
+  });
+
+  return match || "wrapper";
+}
+//#endregion
+
 onMounted(() => {
   const slotNames = Object.keys(slots);
   slotNames.forEach((slotName) => {
@@ -106,7 +136,68 @@ interface FieldState {
         <slot :name="`before-${fieldName}`" />
       </template>
 
-      <template v-if="hasSlot('wrapper')">
+      <!-- wrapper:fieldName -->
+      <template v-if="hasSlot(`wrapper:${fieldName}`)">
+        <slot
+          :name="`wrapper:${fieldName}`"
+          :field="getFieldConfig(fieldName)"
+          :state="fieldStates[fieldName]"
+          :content="() => {
+            if (hasSlot(fieldName)) {
+              return h('div', {}, slots[fieldName]?.({
+                field: getFieldConfig(fieldName),
+                state: fieldStates[fieldName]
+              }))
+            }
+
+            return h('input', {
+              id: fieldName,
+              name: fieldName,
+              type: getFieldConfig(fieldName).type,
+              class: ['input', fieldStates[fieldName].classes],
+              value: vorm.formData[fieldName],
+              onInput: (e: any) => {
+                vorm.formData[fieldName] = e.target.value
+                maybeValidate('onInput', fieldName)
+              },
+              onBlur: () => maybeValidate('onBlur', fieldName)
+            })
+          }"
+        />
+      </template>
+
+      <!-- wrapper:[field1,field2] -->
+      <template v-else-if="hasSlotMatchingWrapperMulti(fieldName)">
+        <slot
+          :name="getWrapperSlotName(fieldName)"
+          :field="getFieldConfig(fieldName)"
+          :state="fieldStates[fieldName]"
+          :content="() => {
+            if (hasSlot(fieldName)) {
+              return h('div', {}, slots[fieldName]?.({
+                field: getFieldConfig(fieldName),
+                state: fieldStates[fieldName]
+              }))
+            }
+
+            return h('input', {
+              id: fieldName,
+              name: fieldName,
+              type: getFieldConfig(fieldName).type,
+              class: ['input', fieldStates[fieldName].classes],
+              value: vorm.formData[fieldName],
+              onInput: (e: any) => {
+                vorm.formData[fieldName] = e.target.value
+                maybeValidate('onInput', fieldName)
+              },
+              onBlur: () => maybeValidate('onBlur', fieldName)
+            })
+          }"
+        />
+      </template>
+
+      <!-- global wrapper -->
+      <template v-else-if="hasSlot('wrapper')">
         <slot
           name="wrapper"
           :field="getFieldConfig(fieldName)"
@@ -135,6 +226,7 @@ interface FieldState {
         />
       </template>
 
+      <!-- default rendering -->
       <template v-else>
         <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
           <template v-if="hasSlot(fieldName)">
