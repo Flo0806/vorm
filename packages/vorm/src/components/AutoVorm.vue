@@ -28,7 +28,7 @@ const validFieldNames = computed(() =>
   )
 );
 
-function assertFieldExists(name: string) {
+function getFieldConfig(name: string): FormFieldSchema {
   const exists = props.schema.find((f) => f.name === name);
   // This method helps to guarantee that the field exists in the schema
   if (!exists) {
@@ -47,10 +47,11 @@ function hasSlot(name: string) {
 onMounted(() => {
   const slotNames = Object.keys(slots);
   slotNames.forEach((slotName) => {
-    const exists = props.schema.find((f) => f.name === slotName);
+    const base = slotName.replace(/^before-|^after-/, "");
+    const exists = props.schema.find((f) => f.name === base);
     if (!exists) {
       console.error(
-        `[AutoVorm] Slot "${slotName}" does not match any field in the provided schema.`
+        `[AutoVorm] Slot "${slotName}" does not match any field in schema.`
       );
     }
   });
@@ -58,6 +59,37 @@ onMounted(() => {
 </script>
 
 <template>
+  <div :class="gridClass || defaultGridClass">
+    <template v-for="fieldName in validFieldNames" :key="fieldName">
+      <template v-if="hasSlot(`before-${fieldName}`)">
+        <slot :name="`before-${fieldName}`" />
+      </template>
+
+      <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
+        <template v-if="hasSlot(fieldName)">
+          <slot :name="fieldName" :field="getFieldConfig(fieldName)" />
+        </template>
+        <template v-else>
+          <label :for="fieldName">{{
+            getFieldConfig(fieldName)?.label || fieldName
+          }}</label>
+          <input
+            :id="fieldName"
+            :name="fieldName"
+            :type="getFieldConfig(fieldName)?.type || 'text'"
+            v-model="vorm.formData[fieldName]"
+          />
+        </template>
+      </div>
+
+      <template v-if="hasSlot(`after-${fieldName}`)">
+        <slot :name="`after-${fieldName}`" />
+      </template>
+    </template>
+  </div>
+</template>
+
+<!-- <template>
   <div :class="gridClass || defaultGridClass">
     <template v-for="fieldName in validFieldNames" :key="fieldName">
       <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
@@ -78,4 +110,4 @@ onMounted(() => {
       </div>
     </template>
   </div>
-</template>
+</template> -->

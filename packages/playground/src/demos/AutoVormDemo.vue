@@ -18,10 +18,22 @@ function onSubmit() {
 <template>
   <VormProvider v-model="formData">
     <AutoVorm :schema="schema" layout="stacked">
-      <template #email2="{ field }">
+      <template #email="{ field }">
         <VormInput :name="field.name" :placeholder="field?.label" />
       </template>
     </AutoVorm>
     <button @click="onSubmit" type="submit">Absenden</button>
   </VormProvider>
+
+  <AutoVorm :schema="schema">
+    <template #before-firstName>
+      <p class="text-sm text-gray-600">
+        Wir brauchen deine echte E-Mail-Adresse.
+      </p>
+    </template>
+
+    <template #after-email>
+      <small>⚠️ Dein Passwort muss mindestens 8 Zeichen enthalten.</small>
+    </template>
+  </AutoVorm>
 </template>
