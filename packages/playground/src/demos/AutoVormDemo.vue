@@ -5,7 +5,13 @@ import VormInput from "../components/VormInput.vue";
 
 const schema: VormSchema = [
   { name: "firstName", type: "text", label: "First Name" },
-  { name: "email", type: "email", label: "Email" },
+  {
+    name: "email",
+    type: "email",
+    label: "Email",
+    validation: [{ rule: "required" }],
+    validationMode: "onBlur",
+  },
 ];
 
 const { formData, validate } = useVorm(schema); // { formData, errors, validate }
@@ -16,7 +22,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <VormProvider v-model="formData">
+  <!-- <VormProvider v-model="formData">
     <AutoVorm :schema="schema" layout="stacked">
       <template #email="{ field }">
         <VormInput :name="field.name" :placeholder="field?.label" />
@@ -35,5 +41,21 @@ function onSubmit() {
     <template #after-email>
       <small>⚠️ Dein Passwort muss mindestens 8 Zeichen enthalten.</small>
     </template>
+  </AutoVorm> -->
+
+  <AutoVorm :schema="schema">
+    <template #wrapper="{ field, content }">
+      <div class="p-4 border rounded">
+        <label>{{ field.label }}</label>
+        <component :is="content" />
+      </div>
+    </template>
   </AutoVorm>
+  <button @click="onSubmit" type="submit">Absenden</button>
 </template>
+
+<style>
+label {
+  font-weight: bold;
+}
+</style>

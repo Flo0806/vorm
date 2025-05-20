@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, useSlots } from "vue";
+import { computed, onMounted, useSlots, h } from "vue";
 import { useVormContext } from "../composables/useVormContext";
 import type { FormFieldSchema, VormSchema } from "../types/schemaTypes";
 
@@ -29,27 +29,46 @@ const validFieldNames = computed(() =>
 );
 
 function getFieldConfig(name: string): FormFieldSchema {
-  const exists = props.schema.find((f) => f.name === name);
-  // This method helps to guarantee that the field exists in the schema
-  if (!exists) {
-    throw new Error(
-      `[AutoVorm] Field "${name}" is not defined in the provided schema.`
-    );
-  }
-  return exists;
+  return (
+    props.schema.find((f) => f.name === name) || {
+      name,
+      type: "text",
+      label: "",
+    }
+  );
 }
 
-function hasSlot(name: string) {
+function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
-// Check if all slots match the schema
+function renderFieldContent(fieldName: string) {
+  const field = getFieldConfig(fieldName);
+  if (!field) return null;
+
+  if (hasSlot(fieldName)) {
+    return h("div", {}, slots[fieldName]?.({ field }));
+  }
+
+  return h("div", {}, [
+    h("label", { for: fieldName }, field.label || fieldName),
+    h("input", {
+      id: fieldName,
+      name: fieldName,
+      type: field.type || "text",
+      class: "input",
+      onInput: (e: any) => (vorm.formData[fieldName] = e.target.value),
+      value: vorm.formData[fieldName],
+    }),
+  ]);
+}
+
 onMounted(() => {
   const slotNames = Object.keys(slots);
   slotNames.forEach((slotName) => {
-    const base = slotName.replace(/^before-|^after-/, "");
-    const exists = props.schema.find((f) => f.name === base);
-    if (!exists) {
+    const clean = slotName.replace(/^before-|^after-/, "");
+    const exists = props.schema.find((f) => f.name === clean);
+    if (!exists && slotName !== "wrapper") {
       console.error(
         `[AutoVorm] Slot "${slotName}" does not match any field in schema.`
       );
@@ -65,22 +84,24 @@ onMounted(() => {
         <slot :name="`before-${fieldName}`" />
       </template>
 
-      <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
-        <template v-if="hasSlot(fieldName)">
-          <slot :name="fieldName" :field="getFieldConfig(fieldName)" />
-        </template>
-        <template v-else>
-          <label :for="fieldName">{{
-            getFieldConfig(fieldName)?.label || fieldName
-          }}</label>
-          <input
-            :id="fieldName"
-            :name="fieldName"
-            :type="getFieldConfig(fieldName)?.type || 'text'"
-            v-model="vorm.formData[fieldName]"
-          />
-        </template>
-      </div>
+      <template v-if="hasSlot('wrapper')">
+        <slot
+          name="wrapper"
+          :field="getFieldConfig(fieldName)"
+          :content="renderFieldContent(fieldName)"
+        />
+      </template>
+      <template v-else>
+        <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
+          <component :is="renderFieldContent(fieldName)" />
+        </div>
+      </template>
+
+      <template v-else>
+        <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
+          <component :is="renderFieldContent(fieldName)" />
+        </div>
+      </template>
 
       <template v-if="hasSlot(`after-${fieldName}`)">
         <slot :name="`after-${fieldName}`" />
@@ -88,26 +109,3 @@ onMounted(() => {
     </template>
   </div>
 </template>
-
-<!-- <template>
-  <div :class="gridClass || defaultGridClass">
-    <template v-for="fieldName in validFieldNames" :key="fieldName">
-      <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
-        <template v-if="hasSlot(fieldName)">
-          <slot :name="fieldName" :field="assertFieldExists(fieldName)" />
-        </template>
-        <template v-else>
-          <label :for="fieldName">{{
-            assertFieldExists(fieldName)?.label
-          }}</label>
-          <input
-            :id="fieldName"
-            :name="fieldName"
-            :type="assertFieldExists(fieldName)?.type || 'text'"
-            v-model="vorm.formData[fieldName]"
-          />
-        </template>
-      </div>
-    </template>
-  </div>
-</template> -->
