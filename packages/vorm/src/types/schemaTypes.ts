@@ -21,10 +21,12 @@ export interface FormFieldSchema {
     | string; // erweiterbar für Custom-Types
   label?: string;
   options?: string[] | ((formData: Record<string, any>) => string[]);
-  class?: string;
+  showIf?: Record<string, any> | ((formData: Record<string, any>) => boolean);
   validation?: ValidationRule[];
   visibility?: (formData: Record<string, any>) => boolean;
   validationMode?: ValidationMode;
+  classes?: string;
+  styles?: Partial<CSSStyleDeclaration>;
 }
 
 /**

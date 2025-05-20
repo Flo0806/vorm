@@ -92,7 +92,7 @@ label {
   font-weight: bold;
 }
 
-input.input.vorm-invalid {
+input.input.vorm-invalid1 {
   border: 1px solid red !important;
 }
 </style>

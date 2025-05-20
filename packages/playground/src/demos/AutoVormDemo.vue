@@ -25,6 +25,8 @@ function onSubmit() {
   if (validate()) console.log("Form 1 valid:", formData);
   else console.log("Errors:", errors);
 }
+
+const myClasses = { "my-button": true };
 </script>
 
 <template>
@@ -49,7 +51,7 @@ function onSubmit() {
     </template>
   </AutoVorm> -->
 
-  <AutoVorm :schema="schema" :showError="false">
+  <AutoVorm :classes="myClasses" :schema="schema" :showError="false">
     <template #before-email>
       <p class="text-xs text-blue-700 italic mb-2">
         Bitte gib deine geschäftliche E-Mail-Adresse an.
@@ -63,16 +65,20 @@ function onSubmit() {
       </div>
     </template>
   </AutoVorm>
-
   <button @click="onSubmit" type="submit">Absenden</button>
 </template>
 
-<style>
+<style scoped>
 label {
   font-weight: bold;
 }
 
-input.input.vorm-invalid {
+.my-button {
+  background-color: green;
+  border-radius: 1rem;
+}
+
+.vorm-invalida {
   border: 1px solid red !important;
 }
 </style>

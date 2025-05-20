@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { computed, useSlots, onMounted, h } from "vue";
+import { computed, useSlots, onMounted, h, StyleValue } from "vue";
 import { useVormContext } from "../composables/useVormContext";
-import type {
-  FieldState,
-  FormFieldSchema,
-  VormSchema,
-} from "../types/schemaTypes";
+import type { FieldState, FormFieldSchema } from "../types/schemaTypes";
 
 const props = defineProps<{
   layout?: "stacked" | "horizontal" | "grid";
@@ -14,6 +10,8 @@ const props = defineProps<{
   fieldWrapperClass?: string;
   only?: string[];
   showError?: boolean;
+  errorClass?: any;
+  classes?: any;
 }>();
 
 const vorm = useVormContext();
@@ -26,11 +24,18 @@ const defaultGridClass = computed(() => {
   return "flex flex-col gap-4";
 });
 
-const validFieldNames = computed(() =>
-  (props.only || vorm.schema.map((f) => f.name)).filter((name) =>
-    vorm.schema.some((f) => f.name === name)
-  )
-);
+const visibleFieldNames = computed(() => {
+  const baseNames = props.only || vorm.schema.map((f) => f.name);
+  return baseNames.filter((name) => {
+    const config = vorm.schema.find((f) => f.name === name);
+    if (!config) return false;
+    const showIf = config.showIf;
+    if (!showIf) return true;
+    return typeof showIf === "function"
+      ? showIf(vorm.formData)
+      : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
+  });
+});
 
 function getFieldConfig(name: string): FormFieldSchema {
   return (
@@ -48,7 +53,7 @@ function hasSlot(name: string): boolean {
 
 const fieldStates = computed(() =>
   Object.fromEntries(
-    validFieldNames.value.map((fieldName) => {
+    visibleFieldNames.value.map((fieldName) => {
       const mode = vorm.getValidationMode(fieldName);
       const error = vorm.errors[fieldName];
       const value = vorm.formData[fieldName];
@@ -67,7 +72,7 @@ const fieldStates = computed(() =>
         dirty,
         initialValue: initial,
         classes: [
-          wasValidated && error ? "vorm-invalid" : "",
+          wasValidated && error ? props.errorClass : "",
           wasValidated && !error && hasValue ? "vorm-valid" : "",
           touched ? "vorm-touched" : "",
           dirty ? "vorm-dirty" : "",
@@ -90,9 +95,8 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
 
 function parseWrapperSlotNames(slotName: string): string[] {
   if (!slotName.startsWith("wrapper:")) return [];
-  const raw = slotName.slice(8);
-  const cleaned = raw.replace(/[\[\]\s]/g, "");
-  return cleaned.split(/[:,]/);
+  const raw = slotName.slice(8).replace(/[[\]\s]/g, "");
+  return raw.split(/[:,]/);
 }
 
 function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
@@ -110,27 +114,45 @@ function getWrapperSlotName(fieldName: string): string {
   return match || "wrapper";
 }
 
+function resolveOptions(field: FormFieldSchema): string[] {
+  return typeof field.options === "function"
+    ? field.options(vorm.formData)
+    : field.options || [];
+}
+
 function renderDefaultInput(fieldName: string) {
-  return h("input", {
+  const config = getFieldConfig(fieldName);
+  const state = fieldStates.value[fieldName];
+  const value = vorm.formData[fieldName];
+  const inputProps = {
     id: fieldName,
     name: fieldName,
-    type: getFieldConfig(fieldName).type,
-    class: ["input", fieldStates.value[fieldName].classes],
-    value: vorm.formData[fieldName],
+    class: ["input", Object.keys(state.classes)[0]],
+    value,
     onInput: (e: any) => {
-      const newValue = e.target.value;
-      vorm.formData[fieldName] = newValue;
-      vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
+      vorm.formData[fieldName] = e.target.value;
+      vorm.dirty[fieldName] = e.target.value !== vorm.initial?.[fieldName];
       maybeValidate("onInput", fieldName);
     },
     onBlur: () => {
       vorm.touched[fieldName] = true;
       maybeValidate("onBlur", fieldName);
     },
-  });
+  };
+
+  if (config.type === "select") {
+    return h(
+      "select",
+      inputProps,
+      resolveOptions(config).map((opt) => h("option", { value: opt }, opt))
+    );
+  }
+
+  return h(config.type === "textarea" ? "textarea" : "input", inputProps);
 }
 
 function renderFieldContent(fieldName: string) {
+  console.log("renderFieldContent", fieldName);
   if (hasSlot(fieldName)) {
     return h(
       "div",
@@ -164,21 +186,13 @@ onMounted(() => {
     });
   });
 });
-
-// Performance measurement
-function measureInputPerformance(fieldName: string, newValue: string) {
-  const t0 = window.performance.now();
-  vorm.formData[fieldName] = newValue;
-  vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
-  maybeValidate("onInput", fieldName);
-  const t1 = window.performance.now();
-  console.log(`⌨️ ${fieldName} input: ${Math.round(t1 - t0)}ms`);
-}
 </script>
 
 <template>
+  <div :class="classes">Ich bin ein Button</div>
+
   <div :class="gridClass || defaultGridClass">
-    <template v-for="fieldName in validFieldNames" :key="fieldName">
+    <template v-for="fieldName in visibleFieldNames" :key="fieldName">
       <slot
         v-if="hasSlot(`before-${fieldName}`)"
         :name="`before-${fieldName}`"
@@ -208,45 +222,25 @@ function measureInputPerformance(fieldName: string, newValue: string) {
         :content="() => renderFieldContent(fieldName)"
       />
 
-      <div v-else :class="fieldWrapperClass || 'flex flex-col gap-1'">
-        <template v-if="hasSlot(fieldName)">
-          <slot
-            :name="fieldName"
-            :field="getFieldConfig(fieldName)"
-            :state="fieldStates[fieldName]"
-          />
-        </template>
-        <template v-else>
-          <label :for="fieldName">
-            {{ getFieldConfig(fieldName).label || fieldName }}
-          </label>
-          <input
-            :id="fieldName"
-            :name="fieldName"
-            :type="getFieldConfig(fieldName).type || 'text'"
-            :class="['input', fieldStates[fieldName].classes]"
-            :value="vorm.formData[fieldName]"
-            @input="(e: any) => {
-     const newValue = e.target.value;
-     vorm.formData[fieldName] = newValue;
-     vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
-     maybeValidate('onInput', fieldName);
-    }"
-            @blur="
-              () => {
-                vorm.touched[fieldName] = true;
-                maybeValidate('onBlur', fieldName);
-              }
-            "
-          />
+      <div
+        v-else
+        :class="
+          (fieldWrapperClass || 'flex flex-col gap-1',
+          getFieldConfig(fieldName).classes)
+        "
+        :style="getFieldConfig(fieldName).styles as StyleValue"
+      >
+        <label :for="fieldName">
+          {{ getFieldConfig(fieldName).label || fieldName }}
+        </label>
+        <component :is="renderFieldContent(fieldName)" />
 
-          <p
-            v-if="props.showError !== false && fieldStates[fieldName].error"
-            class="text-red-500 text-sm"
-          >
-            {{ fieldStates[fieldName].error }}
-          </p>
-        </template>
+        <p
+          v-if="props.showError !== false && fieldStates[fieldName].error"
+          class="text-red-500 text-sm"
+        >
+          {{ fieldStates[fieldName].error }}
+        </p>
       </div>
 
       <slot v-if="hasSlot(`after-${fieldName}`)" :name="`after-${fieldName}`" />

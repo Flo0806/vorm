@@ -6,6 +6,8 @@ import ValidationModesCustomControls from "./demos/ValidationModesCustomControls
 import AutoVormDemo from "./demos/AutoVormDemo.vue";
 import AutoVormSplittedDemo from "./demos/AutoVormSplittedDemo.vue";
 import AutoVormBigDemo from "./demos/AutoVormBigDemo.vue";
+import AutoVormShowIfDemo from "./demos/AutoVormShowIfDemo.vue";
+import TestView from "./demos/TestView.vue";
 
 const routes = [
   { path: "/basics", component: BasicDemo, name: "Basic" },
@@ -43,6 +45,11 @@ const routes = [
     path: "/autovorm-big",
     component: AutoVormBigDemo,
     name: "AutoVormBigDemo",
+  },
+  {
+    path: "/autovorm-showif",
+    component: TestView,
+    name: "TestView",
   },
 ];
 
