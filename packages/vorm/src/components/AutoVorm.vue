@@ -14,10 +14,6 @@ const props = defineProps<{
 
 const vorm = useVormContext();
 const slots = useSlots();
-console.log(props.schema.map((f) => f.name));
-const fieldNames = computed(
-  () => props.only || props.schema.map((f) => f.name)
-);
 
 const defaultGridClass = computed(() => {
   if (props.layout === "grid") {
@@ -34,6 +30,7 @@ const validFieldNames = computed(() =>
 
 function assertFieldExists(name: string) {
   const exists = props.schema.find((f) => f.name === name);
+  // This method helps to guarantee that the field exists in the schema
   if (!exists) {
     throw new Error(
       `[AutoVorm] Field "${name}" is not defined in the provided schema.`
@@ -46,6 +43,7 @@ function hasSlot(name: string) {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
+// Check if all slots match the schema
 onMounted(() => {
   const slotNames = Object.keys(slots);
   slotNames.forEach((slotName) => {
@@ -64,14 +62,11 @@ onMounted(() => {
     <template v-for="fieldName in validFieldNames" :key="fieldName">
       <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
         <template v-if="hasSlot(fieldName)">
-          <slot
-            :name="fieldName"
-            :field="assertFieldExists(fieldName) || { name: fieldName }"
-          />
+          <slot :name="fieldName" :field="assertFieldExists(fieldName)" />
         </template>
         <template v-else>
           <label :for="fieldName">{{
-            assertFieldExists(fieldName)?.label || fieldName
+            assertFieldExists(fieldName)?.label
           }}</label>
           <input
             :id="fieldName"

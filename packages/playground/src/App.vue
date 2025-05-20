@@ -6,7 +6,8 @@
     <router-link to="/validation-modes-custom"
       >Validation Modes Custom Controls Demo</router-link
     >
-    |
+    | <router-link to="/autovorm-basics">AutoVorm Basics</router-link> |
+    <router-link to="/autovorm-extended">AutoVorm Extended</router-link>
   </nav>
   <router-view />
 </template>

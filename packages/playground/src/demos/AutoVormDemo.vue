@@ -8,7 +8,7 @@ const schema: VormSchema = [
   { name: "email", type: "email", label: "Email" },
 ];
 
-const { formData, errors, validate } = useVorm(schema);
+const { formData, validate } = useVorm(schema); // { formData, errors, validate }
 
 function onSubmit() {
   if (validate()) console.log("Form 1 valid:", formData);
