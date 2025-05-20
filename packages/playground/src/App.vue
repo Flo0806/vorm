@@ -7,7 +7,9 @@
       >Validation Modes Custom Controls Demo</router-link
     >
     | <router-link to="/autovorm-basics">AutoVorm Basics</router-link> |
-    <router-link to="/autovorm-extended">AutoVorm Extended</router-link>
+    <router-link to="/autovorm-extended">AutoVorm Extended</router-link> |
+    <router-link to="/autovorm-splitted">AutoVorm Splitted</router-link> |
+    <router-link to="/autovorm-big">AutoVorm Big</router-link>
   </nav>
   <router-view />
 </template>

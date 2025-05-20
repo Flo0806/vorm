@@ -8,7 +8,6 @@ import type {
 } from "../types/schemaTypes";
 
 const props = defineProps<{
-  schema: VormSchema;
   layout?: "stacked" | "horizontal" | "grid";
   columns?: number;
   gridClass?: string;
@@ -28,14 +27,14 @@ const defaultGridClass = computed(() => {
 });
 
 const validFieldNames = computed(() =>
-  (props.only || props.schema.map((f) => f.name)).filter((name) =>
-    props.schema.some((f) => f.name === name)
+  (props.only || vorm.schema.map((f) => f.name)).filter((name) =>
+    vorm.schema.some((f) => f.name === name)
   )
 );
 
 function getFieldConfig(name: string): FormFieldSchema {
   return (
-    props.schema.find((f) => f.name === name) || {
+    vorm.schema.find((f) => f.name === name) || {
       name,
       type: "text",
       label: "",
@@ -156,7 +155,7 @@ onMounted(() => {
     const fieldCandidates = raw.split(/[:,]/).map((n) => n.trim());
 
     fieldCandidates.forEach((field) => {
-      const exists = props.schema.some((f) => f.name === field);
+      const exists = vorm.schema.some((f) => f.name === field);
       if (!exists) {
         console.error(
           `[AutoVorm] Slot "${slotName}" does not match any field in schema.`

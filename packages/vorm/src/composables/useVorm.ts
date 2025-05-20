@@ -43,9 +43,11 @@ export function useVorm(
     let isValid = true;
 
     schema.forEach((field) => {
+      touched[field.name] = true;
+
       const error = validateField(field, formData, errors);
       errors[field.name] = error;
-      validatedFields[field.name] = true; // Select the field as validated
+      validatedFields[field.name] = true;
 
       if (error) isValid = false;
     });
