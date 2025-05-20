@@ -7,6 +7,7 @@ export interface VormContext {
   schema: VormSchema;
   formData: Record<string, any>;
   errors: Record<string, string | null>;
+  validatedFields: Record<string, boolean>;
   validate: () => boolean;
   validateFieldByName: (fieldName: string) => void;
   getValidationMode: (fieldName: string) => ValidationMode;
@@ -15,30 +16,39 @@ export interface VormContext {
 export function useVorm(
   schema: VormSchema,
   options?: { validationMode?: ValidationMode; key?: symbol | string }
-) {
+): VormContext {
   const formData = reactive<Record<string, any>>({});
   const errors = reactive<Record<string, string | null>>({});
+  const validatedFields = reactive<Record<string, boolean>>({});
 
   const globalValidationMode = options?.validationMode || "onSubmit";
 
   schema.forEach((field) => {
     formData[field.name] = "";
     errors[field.name] = null;
+    validatedFields[field.name] = false;
   });
 
-  function validate() {
+  function validate(): boolean {
     let isValid = true;
+
     schema.forEach((field) => {
       const error = validateField(field, formData, errors);
+      errors[field.name] = error;
+      validatedFields[field.name] = true; // Select the field as validated
+
       if (error) isValid = false;
     });
+
     return isValid;
   }
 
   function validateFieldByName(fieldName: string) {
     const field = schema.find((f) => f.name === fieldName);
     if (field) {
-      validateField(field, formData, errors);
+      const error = validateField(field, formData, errors);
+      errors[field.name] = error;
+      validatedFields[field.name] = true;
     }
   }
 
@@ -51,6 +61,7 @@ export function useVorm(
     schema,
     formData,
     errors,
+    validatedFields,
     validate,
     validateFieldByName,
     getValidationMode,

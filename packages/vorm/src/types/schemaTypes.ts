@@ -31,3 +31,11 @@ export interface FormFieldSchema {
  * Defines the entire form schema
  */
 export type VormSchema = FormFieldSchema[];
+
+export interface FieldState {
+  error: string | null;
+  valid: boolean;
+  invalid: boolean;
+  validationMode: ValidationMode;
+  classes: string;
+}

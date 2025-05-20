@@ -4,7 +4,12 @@ import { useVorm, type VormSchema } from "vorm";
 import VormInput from "../components/VormInput.vue";
 
 const schema: VormSchema = [
-  { name: "firstName", type: "text", label: "First Name" },
+  {
+    name: "firstName",
+    type: "text",
+    label: "First Name",
+    validation: [{ rule: "required" }],
+  },
   {
     name: "email",
     type: "email",
@@ -14,10 +19,11 @@ const schema: VormSchema = [
   },
 ];
 
-const { formData, validate } = useVorm(schema); // { formData, errors, validate }
+const { formData, errors, validate } = useVorm(schema); // { formData, errors, validate }
 
 function onSubmit() {
   if (validate()) console.log("Form 1 valid:", formData);
+  else console.log("Errors:", errors);
 }
 </script>
 
@@ -43,19 +49,26 @@ function onSubmit() {
     </template>
   </AutoVorm> -->
 
-  <AutoVorm :schema="schema">
-    <template #wrapper="{ field, content }">
-      <div class="p-4 border rounded">
-        <label>{{ field.label }}</label>
-        <component :is="content" />
+  <AutoVorm :schema="schema" :showError="false">
+    <template #wrapper="{ field, content, state }">
+      <div class="p-4 border rounded" :class="state.classes">
+        <!-- Du übernimmst 100% Kontrolle -->
+        <label :for="field.name">Hier: {{ field.label }}</label>
+        <component :is="content()" />
+        <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
       </div>
     </template>
   </AutoVorm>
+
   <button @click="onSubmit" type="submit">Absenden</button>
 </template>
 
 <style>
 label {
   font-weight: bold;
+}
+
+input.input.vorm-invalid {
+  border: 1px solid red !important;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, useSlots, h } from "vue";
+import { computed, useSlots, onMounted, h } from "vue";
 import { useVormContext } from "../composables/useVormContext";
 import type { FormFieldSchema, VormSchema } from "../types/schemaTypes";
 
@@ -10,6 +10,7 @@ const props = defineProps<{
   gridClass?: string;
   fieldWrapperClass?: string;
   only?: string[];
+  showError?: boolean;
 }>();
 
 const vorm = useVormContext();
@@ -42,25 +43,38 @@ function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
-function renderFieldContent(fieldName: string) {
-  const field = getFieldConfig(fieldName);
-  if (!field) return null;
+const fieldStates = computed(() => {
+  return Object.fromEntries(
+    validFieldNames.value.map((fieldName) => {
+      const mode = vorm.getValidationMode(fieldName);
+      const error = vorm.errors[fieldName];
+      const value = vorm.formData[fieldName];
+      const hasValue = value !== "" && value != null;
+      const wasValidated = vorm.validatedFields?.[fieldName] === true;
 
-  if (hasSlot(fieldName)) {
-    return h("div", {}, slots[fieldName]?.({ field }));
+      const state: FieldState = {
+        error,
+        valid: !error && hasValue && wasValidated,
+        invalid: !!error && wasValidated,
+        validationMode: mode,
+        classes: !wasValidated
+          ? ""
+          : error
+          ? "vorm-invalid"
+          : hasValue
+          ? "vorm-valid"
+          : "",
+      };
+      return [fieldName, state];
+    })
+  );
+});
+
+function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
+  const mode = vorm.getValidationMode(fieldName);
+  if (mode === trigger) {
+    vorm.validateFieldByName(fieldName);
   }
-
-  return h("div", {}, [
-    h("label", { for: fieldName }, field.label || fieldName),
-    h("input", {
-      id: fieldName,
-      name: fieldName,
-      type: field.type || "text",
-      class: "input",
-      onInput: (e: any) => (vorm.formData[fieldName] = e.target.value),
-      value: vorm.formData[fieldName],
-    }),
-  ]);
 }
 
 onMounted(() => {
@@ -75,6 +89,14 @@ onMounted(() => {
     }
   });
 });
+
+interface FieldState {
+  error: string | null;
+  valid: boolean;
+  invalid: boolean;
+  validationMode: "onInput" | "onBlur" | "onSubmit";
+  classes: string;
+}
 </script>
 
 <template>
@@ -88,18 +110,60 @@ onMounted(() => {
         <slot
           name="wrapper"
           :field="getFieldConfig(fieldName)"
-          :content="renderFieldContent(fieldName)"
+          :state="fieldStates[fieldName]"
+          :content="() => {
+            if (hasSlot(fieldName)) {
+              return h('div', {}, slots[fieldName]?.({
+                field: getFieldConfig(fieldName),
+                state: fieldStates[fieldName]
+              }))
+            }
+
+            return h('input', {
+              id: fieldName,
+              name: fieldName,
+              type: getFieldConfig(fieldName).type,
+              class: ['input', fieldStates[fieldName].classes],
+              value: vorm.formData[fieldName],
+              onInput: (e: any) => {
+                vorm.formData[fieldName] = e.target.value
+                maybeValidate('onInput', fieldName)
+              },
+              onBlur: () => maybeValidate('onBlur', fieldName)
+            })
+          }"
         />
-      </template>
-      <template v-else>
-        <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
-          <component :is="renderFieldContent(fieldName)" />
-        </div>
       </template>
 
       <template v-else>
         <div :class="fieldWrapperClass || 'flex flex-col gap-1'">
-          <component :is="renderFieldContent(fieldName)" />
+          <template v-if="hasSlot(fieldName)">
+            <slot
+              :name="fieldName"
+              :field="getFieldConfig(fieldName)"
+              :state="fieldStates[fieldName]"
+            />
+          </template>
+          <template v-else>
+            <label :for="fieldName">{{
+              getFieldConfig(fieldName).label || fieldName
+            }}</label>
+            <input
+              :id="fieldName"
+              :name="fieldName"
+              :type="getFieldConfig(fieldName).type || 'text'"
+              :class="['input', fieldStates[fieldName].classes]"
+              v-model="vorm.formData[fieldName]"
+              @input="maybeValidate('onInput', fieldName)"
+              @blur="maybeValidate('onBlur', fieldName)"
+            />
+            <p
+              v-if="props.showError !== false && fieldStates[fieldName].error"
+              class="text-red-500 text-sm"
+            >
+              {{ fieldStates[fieldName].error }}
+            </p>
+          </template>
         </div>
       </template>
 
