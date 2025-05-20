@@ -38,9 +38,11 @@ const CustomColor = defineComponent({
 const { formData, validate } = useVorm(schema);
 
 function onSubmit() {
+  const t0 = performance.now();
   const ok = validate();
+  const t1 = performance.now();
   console.log("✅ Valid:", ok);
-  console.log("📦 Model:", JSON.stringify(formData));
+  console.log(`⏱ Validation time: ${Math.round(t1 - t0)}ms`);
 }
 </script>
 

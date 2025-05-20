@@ -164,6 +164,16 @@ onMounted(() => {
     });
   });
 });
+
+// Performance measurement
+function measureInputPerformance(fieldName: string, newValue: string) {
+  const t0 = window.performance.now();
+  vorm.formData[fieldName] = newValue;
+  vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
+  maybeValidate("onInput", fieldName);
+  const t1 = window.performance.now();
+  console.log(`⌨️ ${fieldName} input: ${Math.round(t1 - t0)}ms`);
+}
 </script>
 
 <template>
@@ -217,11 +227,11 @@ onMounted(() => {
             :class="['input', fieldStates[fieldName].classes]"
             :value="vorm.formData[fieldName]"
             @input="(e: any) => {
-    const newValue = e.target.value;
-    vorm.formData[fieldName] = newValue;
-    vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
-    maybeValidate('onInput', fieldName);
-  }"
+     const newValue = e.target.value;
+     vorm.formData[fieldName] = newValue;
+     vorm.dirty[fieldName] = newValue !== vorm.initial?.[fieldName];
+     maybeValidate('onInput', fieldName);
+    }"
             @blur="
               () => {
                 vorm.touched[fieldName] = true;
