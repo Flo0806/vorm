@@ -123,7 +123,7 @@ label {
   grid-template-columns: repeat(2, 1fr); /* 2 Spalten */
   gap: 1.5rem;
   padding: 2rem;
-  background-color: #f9f9f9;
+  background-color: #5a3333;
   border-radius: 1rem;
   border: 1px solid #ddd;
 }

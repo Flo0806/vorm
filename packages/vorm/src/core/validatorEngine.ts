@@ -13,7 +13,7 @@ const builtInRules: Record<
 > = {
   required: (value) => {
     if (value === null || value === undefined || value === "") {
-      return "This field is required.";
+      return { message: "This field is required.", params: ["Test"] };
     }
     return null;
   },
@@ -23,6 +23,23 @@ const builtInRules: Record<
   },
   integer: (value) => {
     return Number.isInteger(Number(value)) ? null : "Must be an integer.";
+  },
+  url: (value) => {
+    if (typeof value !== "string") return "Must be a valid URL.";
+
+    try {
+      const u = new URL(value);
+      return u.protocol === "http:" || u.protocol === "https:"
+        ? null
+        : "URL must start with http or https.";
+    } catch {
+      return "Must be a valid URL.";
+    }
+  },
+  alpha: (value) => {
+    return typeof value === "string" && /^[A-Za-z]+$/.test(value)
+      ? null
+      : "Only letters allowed.";
   },
 };
 
@@ -35,6 +52,16 @@ function isValidatorFn(
 ): rule is SyncValidatorFn | AsyncValidatorFn {
   return typeof rule === "function";
 }
+
+function formatMessage(base: string, params?: (string | number)[]): string {
+  if (!params) return base;
+  let result = base;
+  params.forEach((val, i) => {
+    result = result.replace(new RegExp(`\\{${i + 1}\\}`, "g"), String(val));
+  });
+  return result;
+}
+
 //#endregion
 
 export async function validateFieldAsync(
@@ -90,13 +117,31 @@ async function applyRuleAsync(
 
       const result = validator(value, formData);
       const final = result instanceof Promise ? await result : result;
-      return final ? rule.message ?? final : null;
+      if (!final) return null;
+
+      const { message, params } =
+        typeof final === "string"
+          ? { message: final, params: undefined }
+          : final;
+
+      return rule.message
+        ? formatMessage(rule.message, params)
+        : formatMessage(message, params);
     }
 
     if (isValidatorFn(r)) {
       const result = r(value, formData);
       const final = result instanceof Promise ? await result : result;
-      return final ? rule.message ?? final : null;
+      if (!final) return null;
+
+      const { message, params } =
+        typeof final === "string"
+          ? { message: final, params: undefined }
+          : final;
+
+      return rule.message
+        ? formatMessage(rule.message, params)
+        : formatMessage(message, params);
     }
 
     console.warn(`[AutoVorm] Invalid rule:`, rule);
