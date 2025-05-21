@@ -13,7 +13,8 @@
     "paths": {
       "vorm": ["../vorm/src"],
       "vorm/components": ["../vorm/src/components"]
-    }
+    },
+    "types": ["node", "vite/client"]
   },
   "include": ["src"]
 }

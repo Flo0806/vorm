@@ -1,7 +1,20 @@
 <script setup lang="ts">
-import { computed, useSlots, onMounted, h, StyleValue } from "vue";
+import {
+  computed,
+  useSlots,
+  onMounted,
+  h,
+  StyleValue,
+  getCurrentInstance,
+  inject,
+} from "vue";
 import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
+
+const register = inject<(meta: { as?: string }) => void>(
+  "registerVorm",
+  () => {}
+);
 
 const props = defineProps<{
   layout?: "stacked" | "horizontal" | "grid";
@@ -11,11 +24,19 @@ const props = defineProps<{
   only?: string[];
   errorClass?: any;
   classes?: any;
+  as?: string;
+  containerClass?: string;
+  containerStyle?: StyleValue;
+}>();
+
+const emit = defineEmits<{
+  (e: "submit", evt: SubmitEvent): void;
 }>();
 
 const vorm = useVormContext();
 const slots = useSlots();
 
+//#region Computed Properties
 const defaultGridClass = computed(() => {
   if (props.layout === "grid") {
     return `grid grid-cols-${props.columns || 1} gap-4`;
@@ -35,21 +56,6 @@ const visibleFieldNames = computed(() => {
       : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
   });
 });
-
-function getFieldConfig(name: string): VormFieldSchema {
-  return (
-    vorm.schema.find((f) => f.name === name) || {
-      name,
-      type: "text",
-      label: "",
-      showError: true,
-    }
-  );
-}
-
-function hasSlot(name: string): boolean {
-  return Object.prototype.hasOwnProperty.call(slots, name);
-}
 
 const fieldStates = computed(() =>
   Object.fromEntries(
@@ -85,6 +91,23 @@ const fieldStates = computed(() =>
     })
   )
 );
+//#endregion
+
+//#region Helper Functions
+function getFieldConfig(name: string): VormFieldSchema {
+  return (
+    vorm.schema.find((f) => f.name === name) || {
+      name,
+      type: "text",
+      label: "",
+      showError: true,
+    }
+  );
+}
+
+function hasSlot(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(slots, name);
+}
 
 function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   const mode = vorm.getValidationMode(fieldName);
@@ -165,8 +188,12 @@ function renderFieldContent(fieldName: string) {
   }
   return renderDefaultInput(fieldName);
 }
+//#endregion
 
 onMounted(() => {
+  // Register the component with the parent VormProvider
+  register({ as: props.as });
+
   Object.keys(slots).forEach((slotName) => {
     const name = slotName.startsWith("#") ? slotName.slice(1) : slotName;
     const raw = name
@@ -185,11 +212,34 @@ onMounted(() => {
       }
     });
   });
+
+  // Submit-Warnungen
+  const isForm = props.as === "form";
+  const hasSubmitListener = !!getCurrentInstance()?.vnode.props?.onSubmit;
+
+  if (import.meta.env.DEV) {
+    if (isForm && !hasSubmitListener) {
+      console.warn(
+        "[AutoVorm] 'as=\"form\"' is set, but no @submit listener – the form cannot be submitted."
+      );
+    }
+
+    if (!isForm && hasSubmitListener) {
+      console.warn(
+        "[AutoVorm] @submit listener is set, but 'as' is not 'form' – submit will never be triggered."
+      );
+    }
+  }
 });
 </script>
 
 <template>
-  <div :class="(gridClass || defaultGridClass, classes?.outer || '')">
+  <component
+    :is="props.as || 'div'"
+    :class="containerClass || gridClass || defaultGridClass"
+    :style="containerStyle"
+    @submit.prevent="emit('submit', $event)"
+  >
     <template v-for="fieldName in visibleFieldNames" :key="fieldName">
       <slot
         v-if="hasSlot(`before-${fieldName}`)"
@@ -245,5 +295,5 @@ onMounted(() => {
 
       <slot v-if="hasSlot(`after-${fieldName}`)" :name="`after-${fieldName}`" />
     </template>
-  </div>
+  </component>
 </template>

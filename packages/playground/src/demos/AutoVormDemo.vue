@@ -12,7 +12,7 @@ const schema: VormSchema = [
     classes: {
       input: "my-input",
       help: "my-help",
-      outer: "my-outer",
+      outer: "form-grid-item",
     },
   },
   {
@@ -29,6 +29,11 @@ const { formData, errors, validate } = useVorm(schema); // { formData, errors, v
 function onSubmit() {
   if (validate()) console.log("Form 1 valid:", formData);
   else console.log("Errors:", errors);
+}
+
+function submitEvent(e: SubmitEvent) {
+  e.preventDefault();
+  console.log("Form submitted");
 }
 </script>
 
@@ -54,21 +59,26 @@ function onSubmit() {
     </template>
   </AutoVorm> -->
 
-  <AutoVorm :schema="schema" :showError="true">
+  <!-- <AutoVorm :schema="schema" :showError="true"> -->
+  <AutoVorm as="form" container-class="form-grid-wrapper">
     <template #before-email>
       <p class="text-xs text-blue-700 italic mb-2">
         Bitte gib deine geschäftliche E-Mail-Adresse an.
       </p>
     </template>
     <template #wrapper:[email]="{ field, content, state }">
-      <div class="p-4 border rounded" :class="state.classes">
+      <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
         <label :for="field.name">Hier: {{ field.label }}</label>
         <component :is="content()" />
         <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
       </div>
     </template>
+    <template #after-email>
+      <button class="form-grid-item-2" @click="onSubmit" type="submit">
+        Absenden
+      </button>
+    </template>
   </AutoVorm>
-  <button @click="onSubmit" type="submit">Absenden</button>
 </template>
 
 <style>
@@ -103,5 +113,23 @@ label {
 
 .vorm-invalida {
   border: 1px solid red !important;
+}
+
+.form-grid-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 Spalten */
+  gap: 1.5rem;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  border-radius: 1rem;
+  border: 1px solid #ddd;
+}
+
+.form-grid-item {
+  grid-column: span 2;
+}
+
+.form-grid-item-2 {
+  grid-column: 1;
 }
 </style>

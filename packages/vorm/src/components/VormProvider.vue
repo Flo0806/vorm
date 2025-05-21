@@ -10,6 +10,14 @@ const props = defineProps<{
 
 const key = props.contextKey || VormContextKey;
 
+const registeredVorms = ref<{ as?: string | undefined }[]>([]);
+
+function registerVorm(meta: { as?: string }) {
+  registeredVorms.value.push(meta);
+}
+
+provide("registerVorm", registerVorm);
+
 // Context holen
 const context = inject<VormContext>(key as InjectionKey<VormContext>);
 if (!context) {
@@ -48,6 +56,14 @@ onMounted(() => {
       input.addEventListener("blur", () => context.validateFieldByName(name));
     }
   });
+
+  // Check for multiple forms in the same VormProvider
+  const forms = registeredVorms.value.filter((v) => v.as === "form");
+  if (forms.length > 0 && registeredVorms.value.length > 1) {
+    console.warn(
+      `[VormProvider] Multiple AutoVorms registered with 'as="form"' – this may cause conflicts.`
+    );
+  }
 });
 </script>
 
