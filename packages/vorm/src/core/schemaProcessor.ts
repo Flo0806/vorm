@@ -1,7 +1,7 @@
-import type { FormFieldSchema } from "../types/schemaTypes";
+import type { VormFieldSchema } from "../types/schemaTypes";
 
 export function isFieldVisible(
-  field: FormFieldSchema,
+  field: VormFieldSchema,
   formData: Record<string, any>
 ): boolean {
   if (typeof field.visibility === "function") {
@@ -11,7 +11,7 @@ export function isFieldVisible(
 }
 
 export function getFieldOptions(
-  field: FormFieldSchema,
+  field: VormFieldSchema,
   formData: Record<string, any>
 ): string[] {
   if (typeof field.options === "function") {

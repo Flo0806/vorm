@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useSlots, onMounted, h, StyleValue } from "vue";
 import { useVormContext } from "../composables/useVormContext";
-import type { FieldState, FormFieldSchema } from "../types/schemaTypes";
+import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
 
 const props = defineProps<{
   layout?: "stacked" | "horizontal" | "grid";
@@ -36,7 +36,7 @@ const visibleFieldNames = computed(() => {
   });
 });
 
-function getFieldConfig(name: string): FormFieldSchema {
+function getFieldConfig(name: string): VormFieldSchema {
   return (
     vorm.schema.find((f) => f.name === name) || {
       name,
@@ -114,7 +114,7 @@ function getWrapperSlotName(fieldName: string): string {
   return match || "wrapper";
 }
 
-function resolveOptions(field: FormFieldSchema): string[] {
+function resolveOptions(field: VormFieldSchema): string[] {
   return typeof field.options === "function"
     ? field.options(vorm.formData)
     : field.options || [];

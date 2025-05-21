@@ -5,7 +5,7 @@ export type ValidationMode = "onInput" | "onBlur" | "onSubmit";
 /**
  * Defines the types for a single form field
  */
-export interface FormFieldSchema {
+export interface VormFieldSchema {
   name: string;
   type:
     | "text"
@@ -37,7 +37,7 @@ export interface FormFieldSchema {
 /**
  * Defines the entire form schema
  */
-export type VormSchema = FormFieldSchema[];
+export type VormSchema = VormFieldSchema[];
 
 export interface FieldState {
   error: string | null;

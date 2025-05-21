@@ -1,5 +1,5 @@
 // export function validateField(
-//   field: FormFieldSchema,
+//   field: VormFieldSchema,
 //   formData: Record<string, any>
 // ): string | null {
 //   const value = formData[field.name];
@@ -14,11 +14,11 @@
 //   return null;
 // }
 
-import type { FormFieldSchema } from "../types/schemaTypes";
+import type { VormFieldSchema } from "../types/schemaTypes";
 import type { ValidationRule } from "../types/validatorTypes";
 
 export function validateField(
-  field: FormFieldSchema,
+  field: VormFieldSchema,
   formData: Record<string, any>,
   allErrors: Record<string, string | null>
 ): string | null {
