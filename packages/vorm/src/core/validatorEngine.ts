@@ -1,27 +1,11 @@
-// export function validateField(
-//   field: VormFieldSchema,
-//   formData: Record<string, any>
-// ): string | null {
-//   const value = formData[field.name];
-
-//   if (!field.validation) return null;
-
-//   for (const rule of field.validation) {
-//     const result = applyRule(rule, value, formData);
-//     if (result) return result; // first error stops further checks
-//   }
-
-//   return null;
-// }
-
 import type { VormFieldSchema } from "../types/schemaTypes";
 import type { ValidationRule } from "../types/validatorTypes";
 
-export function validateField(
+export async function validateFieldAsync(
   field: VormFieldSchema,
   formData: Record<string, any>,
   allErrors: Record<string, string | null>
-): string | null {
+): Promise<string | null> {
   const value = formData[field.name];
   if (!field.validation) {
     allErrors[field.name] = null;
@@ -29,7 +13,7 @@ export function validateField(
   }
 
   for (const rule of field.validation) {
-    const result = applyRule(rule, value, formData);
+    const result = await applyRuleAsync(rule, value, formData);
     if (result) {
       allErrors[field.name] = result;
       if (rule.affects) {
@@ -46,25 +30,27 @@ export function validateField(
   return null;
 }
 
-function applyRule(
+/**
+ * Async validation function
+ * @param rule
+ * @param value
+ * @param formData
+ * @returns
+ */
+async function applyRuleAsync(
   rule: ValidationRule,
   value: any,
   formData: Record<string, any>
-): string | null {
+): Promise<string | null> {
   if (typeof rule.rule === "string") {
-    // Handle built-in rules
-    if (
-      rule.rule === "required" &&
-      (value === null || value === undefined || value === "")
-    ) {
+    if (rule.rule === "required" && (value === "" || value == null)) {
       return rule.message || "This field is required.";
     }
-
-    // More built-in rules can go here
   }
 
   if (typeof rule.rule === "function") {
-    return rule.rule(value, formData);
+    const result = rule.rule(value, formData);
+    return result instanceof Promise ? await result : result;
   }
 
   return null;

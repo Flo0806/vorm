@@ -1,6 +1,6 @@
 import { reactive, provide, InjectionKey } from "vue";
 import type { VormSchema, ValidationMode } from "../types/schemaTypes";
-import { validateField } from "../core/validatorEngine";
+import { validateFieldAsync } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
 
 export interface VormContext {
@@ -11,8 +11,8 @@ export interface VormContext {
   touched: Record<string, boolean>;
   dirty: Record<string, boolean>;
   initial: Record<string, any>;
-  validate: () => boolean;
-  validateFieldByName: (fieldName: string) => void;
+  validate: () => Promise<boolean>;
+  validateFieldByName: (fieldName: string) => Promise<void>;
   getValidationMode: (fieldName: string) => ValidationMode;
 }
 
@@ -43,26 +43,25 @@ export function useVorm(
       : (field.showError = false);
   });
 
-  function validate(): boolean {
+  async function validate(): Promise<boolean> {
     let isValid = true;
 
-    schema.forEach((field) => {
+    for (const field of schema) {
       touched[field.name] = true;
-
-      const error = validateField(field, formData, errors);
+      const error = await validateFieldAsync(field, formData, errors);
       errors[field.name] = error;
       validatedFields[field.name] = true;
-
       if (error) isValid = false;
-    });
+    }
 
     return isValid;
   }
 
-  function validateFieldByName(fieldName: string) {
+  async function validateFieldByName(fieldName: string): Promise<void> {
     const field = schema.find((f) => f.name === fieldName);
     if (field) {
-      const error = validateField(field, formData, errors);
+      touched[field.name] = true;
+      const error = await validateFieldAsync(field, formData, errors);
       errors[field.name] = error;
       validatedFields[field.name] = true;
     }

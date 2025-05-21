@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { VormProvider, AutoVorm } from "vorm/components";
-import { useVorm, type VormSchema } from "vorm";
+import { matchField, useVorm, type VormSchema } from "vorm";
 import VormInput from "../components/VormInput.vue";
 
 const schema: VormSchema = [
@@ -19,15 +19,15 @@ const schema: VormSchema = [
     name: "email",
     type: "email",
     label: "Email",
-    validation: [{ rule: "required" }],
+    validation: [{ rule: "required" }, { rule: matchField("firstName") }],
     validationMode: "onBlur",
   },
 ];
 
 const { formData, errors, validate } = useVorm(schema); // { formData, errors, validate }
 
-function onSubmit() {
-  if (validate()) console.log("Form 1 valid:", formData);
+async function onSubmit() {
+  if (await validate()) console.log("Form 1 valid:", formData);
   else console.log("Errors:", errors);
 }
 
@@ -60,7 +60,7 @@ function submitEvent(e: SubmitEvent) {
   </AutoVorm> -->
 
   <!-- <AutoVorm :schema="schema" :showError="true"> -->
-  <AutoVorm as="form" container-class="form-grid-wrapper">
+  <AutoVorm as="form" @submit="submitEvent" container-class="form-grid-wrapper">
     <template #before-email>
       <p class="text-xs text-blue-700 italic mb-2">
         Bitte gib deine geschäftliche E-Mail-Adresse an.
