@@ -1,7 +1,11 @@
-import { reactive, provide, type InjectionKey, watch, toRaw } from "vue";
+import { reactive, provide, watch, toRaw, type InjectionKey } from "vue";
 import type { VormSchema, ValidationMode } from "../types/schemaTypes";
 import { validateFieldAsync } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
+import {
+  compileField,
+  type CompiledValidator,
+} from "../core/validatorCompiler.js";
 
 export interface VormContext {
   schema: VormSchema;
@@ -53,6 +57,12 @@ export function useVorm(
       : (field.showError = false);
   });
 
+  const compiledValidators = new Map<string, CompiledValidator[]>();
+
+  schema.forEach((field) => {
+    compiledValidators.set(field.name, compileField(field));
+  });
+
   watch(
     () => schema,
     (newSchema) => {
@@ -89,23 +99,52 @@ export function useVorm(
   }
 
   async function validate(): Promise<boolean> {
-    const rawData = toRaw(formData); // entkoppelt von Vue-Reaktivität
+    const raw = toRaw(formData);
     let isValid = true;
 
     const validations = schema.map(async (field) => {
+      const value = raw[field.name];
       touched[field.name] = true;
 
-      const error = await validateFieldAsync(field, rawData, errors);
-      errors[field.name] = error;
-      validatedFields[field.name] = true;
+      const validators = compiledValidators.get(field.name) || [];
 
-      if (error) isValid = false;
-      return !error;
+      for (const validateFn of validators) {
+        const error = await validateFn(value, raw);
+        if (error) {
+          errors[field.name] = error;
+          validatedFields[field.name] = true;
+          isValid = false;
+          return false; // early exit for this field
+        }
+      }
+
+      errors[field.name] = null;
+      validatedFields[field.name] = true;
+      return true;
     });
 
-    await Promise.all(validations);
-    return isValid;
+    const results = await Promise.all(validations);
+    return results.every(Boolean);
   }
+
+  // async function validate(): Promise<boolean> {
+  //   const rawData = toRaw(formData); // entkoppelt von Vue-Reaktivität
+  //   let isValid = true;
+
+  //   const validations = schema.map(async (field) => {
+  //     touched[field.name] = true;
+
+  //     const error = await validateFieldAsync(field, rawData, errors);
+  //     errors[field.name] = error;
+  //     validatedFields[field.name] = true;
+
+  //     if (error) isValid = false;
+  //     return !error;
+  //   });
+
+  //   await Promise.all(validations);
+  //   return isValid;
+  // }
 
   // async function validate(): Promise<boolean> {
   //   const validations = schema.map(async (field) => {

@@ -10,6 +10,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
     "paths": {
       "vorm": ["../vorm/src"],
       "vorm/components": ["../vorm/src/components"]
