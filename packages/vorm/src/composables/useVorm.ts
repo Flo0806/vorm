@@ -37,6 +37,10 @@ export function useVorm(
     touched[name] = false;
     dirty[name] = false;
     initial[name] = "";
+    // Default set `showError` to true if not defined
+    field.showError === undefined
+      ? (field.showError = true)
+      : (field.showError = false);
   });
 
   function validate(): boolean {

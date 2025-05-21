@@ -9,6 +9,11 @@ const schema: VormSchema = [
     type: "text",
     label: "First Name",
     validation: [{ rule: "required" }],
+    classes: {
+      input: "my-input",
+      help: "my-help",
+      outer: "my-outer",
+    },
   },
   {
     name: "email",
@@ -25,8 +30,6 @@ function onSubmit() {
   if (validate()) console.log("Form 1 valid:", formData);
   else console.log("Errors:", errors);
 }
-
-const myClasses = { "my-button": true };
 </script>
 
 <template>
@@ -51,7 +54,7 @@ const myClasses = { "my-button": true };
     </template>
   </AutoVorm> -->
 
-  <AutoVorm :classes="myClasses" :schema="schema" :showError="false">
+  <AutoVorm :schema="schema" :showError="true">
     <template #before-email>
       <p class="text-xs text-blue-700 italic mb-2">
         Bitte gib deine geschäftliche E-Mail-Adresse an.
@@ -68,12 +71,32 @@ const myClasses = { "my-button": true };
   <button @click="onSubmit" type="submit">Absenden</button>
 </template>
 
-<style scoped>
+<style>
 label {
   font-weight: bold;
 }
 
 .my-button {
+  background-color: green;
+  border-radius: 1rem;
+}
+
+.my-input {
+  background-color: pink;
+  border-radius: 1rem;
+}
+
+.my-outer {
+  background-color: red;
+  border-radius: 1rem;
+}
+
+.my-label {
+  background-color: yellow;
+  border-radius: 1rem;
+}
+
+.my-help {
   background-color: green;
   border-radius: 1rem;
 }

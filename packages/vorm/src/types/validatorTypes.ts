@@ -6,6 +6,7 @@ export type SyncValidatorFn = (
   formData: Record<string, any>
 ) => string | null;
 
+// TODO: add async validator
 export interface ValidationRule {
   rule: string | SyncValidatorFn;
   message?: string;

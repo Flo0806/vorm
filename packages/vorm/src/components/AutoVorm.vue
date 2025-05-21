@@ -9,7 +9,6 @@ const props = defineProps<{
   gridClass?: string;
   fieldWrapperClass?: string;
   only?: string[];
-  showError?: boolean;
   errorClass?: any;
   classes?: any;
 }>();
@@ -43,6 +42,7 @@ function getFieldConfig(name: string): FormFieldSchema {
       name,
       type: "text",
       label: "",
+      showError: true,
     }
   );
 }
@@ -127,7 +127,7 @@ function renderDefaultInput(fieldName: string) {
   const inputProps = {
     id: fieldName,
     name: fieldName,
-    class: ["input", Object.keys(state.classes)[0]],
+    class: ["input", config.classes?.input],
     value,
     onInput: (e: any) => {
       vorm.formData[fieldName] = e.target.value;
@@ -189,9 +189,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div :class="classes">Ich bin ein Button</div>
-
-  <div :class="gridClass || defaultGridClass">
+  <div :class="(gridClass || defaultGridClass, classes?.outer || '')">
     <template v-for="fieldName in visibleFieldNames" :key="fieldName">
       <slot
         v-if="hasSlot(`before-${fieldName}`)"
@@ -224,20 +222,22 @@ onMounted(() => {
 
       <div
         v-else
-        :class="
-          (fieldWrapperClass || 'flex flex-col gap-1',
-          getFieldConfig(fieldName).classes)
-        "
-        :style="getFieldConfig(fieldName).styles as StyleValue"
+        :class="getFieldConfig(fieldName).classes?.outer ? getFieldConfig(fieldName).classes!.outer : fieldWrapperClass || 'flex flex-col gap-1'"
       >
-        <label :for="fieldName">
-          {{ getFieldConfig(fieldName).label || fieldName }}
+        <label
+          :for="fieldName"
+          :class="getFieldConfig(fieldName).classes?.label"
+        >
+          {{ hasSlot(fieldName) ? "" : getFieldConfig(fieldName).label }}
         </label>
         <component :is="renderFieldContent(fieldName)" />
 
         <p
-          v-if="props.showError !== false && fieldStates[fieldName].error"
-          class="text-red-500 text-sm"
+          v-if="
+            getFieldConfig(fieldName).showError !== false &&
+            fieldStates[fieldName].error
+          "
+          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'text-red-500 text-sm'"
         >
           {{ fieldStates[fieldName].error }}
         </p>

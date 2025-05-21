@@ -20,13 +20,18 @@ export interface FormFieldSchema {
     | "password"
     | string; // erweiterbar für Custom-Types
   label?: string;
+  showError?: boolean;
   options?: string[] | ((formData: Record<string, any>) => string[]);
   showIf?: Record<string, any> | ((formData: Record<string, any>) => boolean);
   validation?: ValidationRule[];
   visibility?: (formData: Record<string, any>) => boolean;
   validationMode?: ValidationMode;
-  classes?: string;
-  styles?: Partial<CSSStyleDeclaration>;
+  classes?: {
+    outer?: string;
+    input?: string;
+    label?: string;
+    help?: string;
+  };
 }
 
 /**
