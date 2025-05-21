@@ -19,7 +19,10 @@ const schema: VormSchema = [
     name: "email",
     type: "email",
     label: "Email",
-    validation: [{ rule: "required" }, { rule: matchField("firstName") }],
+    validation: [
+      { rule: "required" },
+      { rule: matchField("firstName"), message: "Test test" },
+    ],
     validationMode: "onBlur",
   },
 ];

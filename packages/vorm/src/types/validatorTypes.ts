@@ -1,4 +1,9 @@
 /**
+ * Default validation rules
+ */
+export type BuiltInRuleName = "required" | "email" | "integer"; // + später z. B. 'url', 'alpha'
+
+/**
  * Defines a single validation rule
  */
 export type SyncValidatorFn = (
@@ -15,7 +20,7 @@ export type AsyncValidatorFn = (
 ) => Promise<string | null>;
 
 export interface ValidationRule {
-  rule: string | SyncValidatorFn | AsyncValidatorFn;
+  rule: BuiltInRuleName | SyncValidatorFn | AsyncValidatorFn;
   message?: string;
   affects?: string[];
 }
