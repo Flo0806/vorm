@@ -108,6 +108,8 @@ async function applyRuleAsync(
   const r = rule.rule;
 
   try {
+    let result: any;
+
     if (isBuiltInRule(r)) {
       const validator = builtInRules[r];
       if (!validator) {
@@ -115,39 +117,78 @@ async function applyRuleAsync(
         return null;
       }
 
-      const result = validator(value, formData);
-      const final = result instanceof Promise ? await result : result;
-      if (!final) return null;
-
-      const { message, params } =
-        typeof final === "string"
-          ? { message: final, params: undefined }
-          : final;
-
-      return rule.message
-        ? formatMessage(rule.message, params)
-        : formatMessage(message, params);
+      result = validator(value, formData);
+    } else if (isValidatorFn(r)) {
+      result = r(value, formData);
+    } else {
+      console.warn(`[AutoVorm] Invalid rule:`, rule);
+      return null;
     }
 
-    if (isValidatorFn(r)) {
-      const result = r(value, formData);
-      const final = result instanceof Promise ? await result : result;
-      if (!final) return null;
+    // Nur awaiten, wenn nötig
+    const final = result instanceof Promise ? await result : result;
+    if (!final) return null;
 
-      const { message, params } =
-        typeof final === "string"
-          ? { message: final, params: undefined }
-          : final;
+    const { message, params } =
+      typeof final === "string" ? { message: final, params: undefined } : final;
 
-      return rule.message
-        ? formatMessage(rule.message, params)
-        : formatMessage(message, params);
-    }
-
-    console.warn(`[AutoVorm] Invalid rule:`, rule);
-    return null;
+    return rule.message
+      ? formatMessage(rule.message, params)
+      : formatMessage(message, params);
   } catch (error) {
     console.error(`[AutoVorm] Validator threw an error for rule:`, rule, error);
     return "Validation failed";
   }
 }
+
+// async function applyRuleAsync(
+//   rule: ValidationRule,
+//   value: any,
+//   formData: Record<string, any>
+// ): Promise<string | null> {
+//   const r = rule.rule;
+
+//   try {
+//     if (isBuiltInRule(r)) {
+//       const validator = builtInRules[r];
+//       if (!validator) {
+//         console.warn(`[AutoVorm] Unknown built-in rule: "${r}"`);
+//         return null;
+//       }
+
+//       const result = validator(value, formData);
+//       const final = result instanceof Promise ? await result : result;
+//       if (!final) return null;
+
+//       const { message, params } =
+//         typeof final === "string"
+//           ? { message: final, params: undefined }
+//           : final;
+
+//       return rule.message
+//         ? formatMessage(rule.message, params)
+//         : formatMessage(message, params);
+//     }
+
+//     if (isValidatorFn(r)) {
+//       const result = r(value, formData);
+//       const final = result instanceof Promise ? await result : result;
+//       if (!final) return null;
+
+//       const { message, params } =
+//         typeof final === "string"
+//           ? { message: final, params: undefined }
+//           : final;
+
+//       return rule.message
+//         ? formatMessage(rule.message, params)
+//         : formatMessage(message, params);
+//     }
+
+//     console.warn(`[AutoVorm] Invalid rule:`, rule);
+//     return null;
+//   } catch (error) {
+//     console.error(`[AutoVorm] Validator threw an error for rule:`, rule, error);
+//     return "Validation failed";
+//   }
+// }

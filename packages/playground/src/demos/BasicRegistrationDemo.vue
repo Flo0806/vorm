@@ -40,7 +40,7 @@ const registrationSchema: VormSchema = [
     label: "Confirm Email",
     validation: [
       { rule: "required", message: "Please confirm your email" },
-      { rule: matchField("email", "Emails do not match"), affects: ["email"] },
+      { rule: matchField("email"), affects: ["email"] },
     ],
   },
   {
@@ -74,8 +74,8 @@ const registrationSchema: VormSchema = [
 
 const { formData, errors, validate } = useVorm(registrationSchema);
 
-function onSubmit() {
-  if (validate()) {
+async function onSubmit() {
+  if (await validate()) {
     console.log("Valid data:", formData);
   } else {
     console.log("Errors:", errors);

@@ -1,4 +1,4 @@
-import { ValidationRule } from "./validatorTypes.js";
+import { type ValidationRule } from "./validatorTypes";
 
 export type ValidationMode = "onInput" | "onBlur" | "onSubmit";
 
@@ -32,6 +32,8 @@ export interface VormFieldSchema {
     label?: string;
     help?: string;
   };
+  fields?: VormSchema;
+  inheritWrapper?: boolean;
 }
 
 /**

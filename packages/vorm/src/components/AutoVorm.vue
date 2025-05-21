@@ -4,12 +4,15 @@ import {
   useSlots,
   onMounted,
   h,
-  StyleValue,
+  type StyleValue,
   getCurrentInstance,
   inject,
 } from "vue";
 import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
+import { expandSchema } from "../utils/expandSchema";
+import { getValueByPath, setValueByPath } from "../utils/pathHelpers";
+import { slotFieldMatchesPattern } from "../utils/slotMatcher";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -37,6 +40,8 @@ const vorm = useVormContext();
 const slots = useSlots();
 
 //#region Computed Properties
+const expandedSchema = computed(() => expandSchema(vorm.schema, vorm.formData));
+
 const defaultGridClass = computed(() => {
   if (props.layout === "grid") {
     return `grid grid-cols-${props.columns || 1} gap-4`;
@@ -45,9 +50,9 @@ const defaultGridClass = computed(() => {
 });
 
 const visibleFieldNames = computed(() => {
-  const baseNames = props.only || vorm.schema.map((f) => f.name);
+  const baseNames = props.only || expandedSchema.value.map((f) => f.name);
   return baseNames.filter((name) => {
-    const config = vorm.schema.find((f) => f.name === name);
+    const config = expandedSchema.value.find((f) => f.name === name);
     if (!config) return false;
     const showIf = config.showIf;
     if (!showIf) return true;
@@ -56,6 +61,19 @@ const visibleFieldNames = computed(() => {
       : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
   });
 });
+
+// const visibleFieldNames = computed(() => {
+//   const baseNames = props.only || vorm.schema.map((f) => f.name);
+//   return baseNames.filter((name) => {
+//     const config = vorm.schema.find((f) => f.name === name);
+//     if (!config) return false;
+//     const showIf = config.showIf;
+//     if (!showIf) return true;
+//     return typeof showIf === "function"
+//       ? showIf(vorm.formData)
+//       : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
+//   });
+// });
 
 const fieldStates = computed(() =>
   Object.fromEntries(
@@ -96,7 +114,7 @@ const fieldStates = computed(() =>
 //#region Helper Functions
 function getFieldConfig(name: string): VormFieldSchema {
   return (
-    vorm.schema.find((f) => f.name === name) || {
+    expandedSchema.value.find((f) => f.name === name) || {
       name,
       type: "text",
       label: "",
@@ -116,24 +134,69 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   }
 }
 
+// function parseWrapperSlotNames(slotName: string): string[] {
+//   if (!slotName.startsWith("wrapper:")) return [];
+//   const raw = slotName.slice(8).replace(/[[\]\s]/g, "");
+//   return raw.split(/[:,]/);
+// }
 function parseWrapperSlotNames(slotName: string): string[] {
   if (!slotName.startsWith("wrapper:")) return [];
-  const raw = slotName.slice(8).replace(/[[\]\s]/g, "");
-  return raw.split(/[:,]/);
+
+  // Behalte das Format in [] → z. B. wrapper:[contacts:email,foo:bar]
+  const raw = slotName.slice(8).trim(); // "contacts:email,foo:bar"
+
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    const list = raw.slice(1, -1); // ohne []
+    return list.split(",").map((s) => s.trim()); // ['contacts:email', 'foo:bar']
+  }
+
+  return [raw]; // einzelner Name wie "contacts:email"
 }
+
+// function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
+//   return Object.keys(slots).some((name) => {
+//     if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
+//     return parseWrapperSlotNames(name).includes(fieldName);
+//   });
+// }
 
 function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
-  return Object.keys(slots).some((name) => {
-    if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
-    return parseWrapperSlotNames(name).includes(fieldName);
+  const field = getFieldConfig(fieldName);
+
+  return Object.keys(slots).some((slotName) => {
+    if (!slotName.startsWith("wrapper:")) return false;
+    if (slotName === `wrapper:${fieldName}` || slotName === "wrapper")
+      return false;
+
+    const patterns = parseWrapperSlotNames(slotName);
+
+    return patterns.some((pattern) =>
+      slotFieldMatchesPattern(fieldName, pattern, field.inheritWrapper === true)
+    );
   });
 }
 
+// function getWrapperSlotName(fieldName: string): string {
+//   const match = Object.keys(slots).find((name) => {
+//     if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
+//     return parseWrapperSlotNames(name).includes(fieldName);
+//   });
+//   return match || "wrapper";
+// }
+
 function getWrapperSlotName(fieldName: string): string {
-  const match = Object.keys(slots).find((name) => {
-    if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
-    return parseWrapperSlotNames(name).includes(fieldName);
+  const match = Object.keys(slots).find((slotName) => {
+    if (!slotName.startsWith("wrapper:")) return false;
+    if (slotName === `wrapper:${fieldName}` || slotName === "wrapper")
+      return false;
+
+    const patterns = parseWrapperSlotNames(slotName);
+
+    return patterns.some((pattern) =>
+      slotFieldMatchesPattern(fieldName, pattern)
+    );
   });
+
   return match || "wrapper";
 }
 
@@ -145,15 +208,15 @@ function resolveOptions(field: VormFieldSchema): string[] {
 
 function renderDefaultInput(fieldName: string) {
   const config = getFieldConfig(fieldName);
-  const state = fieldStates.value[fieldName];
-  const value = vorm.formData[fieldName];
+  const value = getValueByPath(vorm.formData, fieldName); // vorm.formData[fieldName];
   const inputProps = {
     id: fieldName,
     name: fieldName,
     class: ["input", config.classes?.input],
     value,
     onInput: (e: any) => {
-      vorm.formData[fieldName] = e.target.value;
+      setValueByPath(vorm.formData, fieldName, e.target.value);
+      //vorm.formData[fieldName] = e.target.value;
       vorm.dirty[fieldName] = e.target.value !== vorm.initial?.[fieldName];
       maybeValidate("onInput", fieldName);
     },
@@ -175,7 +238,6 @@ function renderDefaultInput(fieldName: string) {
 }
 
 function renderFieldContent(fieldName: string) {
-  console.log("renderFieldContent", fieldName);
   if (hasSlot(fieldName)) {
     return h(
       "div",
@@ -195,13 +257,16 @@ onMounted(() => {
   register({ as: props.as });
 
   Object.keys(slots).forEach((slotName) => {
+    if (["default", "fallback", "root", "_", "wrapper"].includes(slotName))
+      return;
+
     const name = slotName.startsWith("#") ? slotName.slice(1) : slotName;
     const raw = name
       .replace(/^before-/, "")
       .replace(/^after-/, "")
       .replace(/^wrapper:/, "")
       .replace(/[\[\]\s]/g, "");
-    const fieldCandidates = raw.split(/[:,]/).map((n) => n.trim());
+    const fieldCandidates = raw.split(/[.,]/).map((n) => n.trim());
 
     fieldCandidates.forEach((field) => {
       const exists = vorm.schema.some((f) => f.name === field);

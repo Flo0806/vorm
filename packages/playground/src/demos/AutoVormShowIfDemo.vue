@@ -9,7 +9,6 @@ const schema: VormSchema = [
     type: "select",
     options: ["User", "Admin", "Moderator"],
     validation: [{ rule: "required" }],
-    classes: "vorm-horizontal",
   },
   {
     name: "adminCode",

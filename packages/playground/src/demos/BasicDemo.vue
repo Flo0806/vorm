@@ -16,12 +16,12 @@ const schema2: VormSchema = [
   { name: "email", type: "email", label: "Email" },
 ];
 
-const { formData, errors, validate } = useVorm(schema1, { key: contextKey1 });
+const { formData, validate } = useVorm(schema1, { key: contextKey1 });
 const test2 = useVorm(schema2, { key: contextKey2 });
 
-function onSubmit() {
-  if (validate()) console.log("Form 1 valid:", formData);
-  if (test2.validate()) console.log("Form 2 valid:", test2.formData);
+async function onSubmit() {
+  if (await validate()) console.log("Form 1 valid:", formData);
+  if (await test2.validate()) console.log("Form 2 valid:", test2.formData);
 }
 </script>
 

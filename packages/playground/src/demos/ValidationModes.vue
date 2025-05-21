@@ -30,8 +30,8 @@ const { formData, errors, validate } = useVorm(schema, {
   validationMode: "onSubmit",
 });
 
-function onSubmit() {
-  if (validate()) {
+async function onSubmit() {
+  if (await validate()) {
     console.log("Valid data:", formData);
   } else {
     console.log("Errors:", errors);

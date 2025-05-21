@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { VormProvider, AutoVorm } from "vorm/components";
 import { matchField, useVorm, type VormSchema } from "vorm";
-import VormInput from "../components/VormInput.vue";
+import { onMounted, ref } from "vue";
 
-const schema: VormSchema = [
+const schema = ref<VormSchema>([
   {
     name: "firstName",
     type: "text",
-    label: "First Name",
+    label: "FirstName",
     validation: [{ rule: "required" }],
     classes: {
       input: "my-input",
@@ -25,9 +25,9 @@ const schema: VormSchema = [
     ],
     validationMode: "onBlur",
   },
-];
+]);
 
-const { formData, errors, validate } = useVorm(schema); // { formData, errors, validate }
+const { formData, errors, validate } = useVorm(schema.value, { key: "test" }); // { formData, errors, validate }
 
 async function onSubmit() {
   if (await validate()) console.log("Form 1 valid:", formData);
@@ -38,6 +38,13 @@ function submitEvent(e: SubmitEvent) {
   e.preventDefault();
   console.log("Form submitted");
 }
+
+onMounted(() => {
+  // setTimeout(() => {
+  //   schema.value[0].label = "Vorname";
+  //   console.log("Label changed", schema);
+  // }, 3000);
+});
 </script>
 
 <template>
@@ -63,25 +70,33 @@ function submitEvent(e: SubmitEvent) {
   </AutoVorm> -->
 
   <!-- <AutoVorm :schema="schema" :showError="true"> -->
-  <AutoVorm as="form" @submit="submitEvent" container-class="form-grid-wrapper">
-    <template #before-email>
-      <p class="text-xs text-blue-700 italic mb-2">
-        Bitte gib deine geschäftliche E-Mail-Adresse an.
-      </p>
-    </template>
-    <template #wrapper:[email]="{ field, content, state }">
-      <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
-        <label :for="field.name">Hier: {{ field.label }}</label>
-        <component :is="content()" />
-        <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
-      </div>
-    </template>
-    <template #after-email>
-      <button class="form-grid-item-2" @click="onSubmit" type="submit">
-        Absenden
-      </button>
-    </template>
-  </AutoVorm>
+  <VormProvider context-key="test" v-model="formData">
+    <AutoVorm
+      as="form"
+      @submit="submitEvent"
+      container-class="form-grid-wrapper"
+    >
+      <template #before-email>
+        <p class="text-xs text-blue-700 italic mb-2">
+          Bitte gib deine geschäftliche E-Mail-Adresse an.
+        </p>
+      </template>
+      <template #wrapper:[email]="{ field, content, state }">
+        <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
+          <label :for="field.name">Hier: {{ field.label }}</label>
+          <component :is="content()" />
+          <p v-if="state.error" class="text-red-500 text-xs">
+            {{ state.error }}
+          </p>
+        </div>
+      </template>
+      <template #after-email>
+        <button class="form-grid-item-2" @click="onSubmit" type="submit">
+          Absenden
+        </button>
+      </template>
+    </AutoVorm>
+  </VormProvider>
 </template>
 
 <style>

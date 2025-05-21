@@ -29,8 +29,8 @@ const schema: VormSchema = [
 
 const { formData, errors, validate } = useVorm(schema);
 
-function onSubmit() {
-  if (validate()) {
+async function onSubmit() {
+  if (await validate()) {
     console.log("Valid data:", formData);
   } else {
     console.log("Errors:", errors);

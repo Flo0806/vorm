@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, inject, provide, InjectionKey } from "vue";
+import { ref, onMounted, inject, provide, type InjectionKey } from "vue";
 import type { VormContext } from "../composables/useVorm";
 import { VormContextKey, VormActiveContextKey } from "../core/vormContext";
 

@@ -7,7 +7,8 @@ import AutoVormDemo from "./demos/AutoVormDemo.vue";
 import AutoVormSplittedDemo from "./demos/AutoVormSplittedDemo.vue";
 import AutoVormBigDemo from "./demos/AutoVormBigDemo.vue";
 import AutoVormShowIfDemo from "./demos/AutoVormShowIfDemo.vue";
-import TestView from "./demos/TestView.vue";
+
+import AutoVormRepeaterDemo from "./demos/AutoVormRepeaterDemo.vue";
 
 const routes = [
   { path: "/basics", component: BasicDemo, name: "Basic" },
@@ -48,8 +49,13 @@ const routes = [
   },
   {
     path: "/autovorm-showif",
-    component: TestView,
+    component: AutoVormShowIfDemo,
     name: "TestView",
+  },
+  {
+    path: "/autovorm-repeater",
+    component: AutoVormRepeaterDemo,
+    name: "AutoVormRepeaterDemo",
   },
 ];
 

@@ -1,5 +1,5 @@
 import type { VormContext } from "../composables/useVorm";
-import { InjectionKey } from "vue";
+import { type InjectionKey } from "vue";
 
 export const VormContextKey: InjectionKey<VormContext> = Symbol("VormContext");
 
