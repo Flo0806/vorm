@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { VormProvider, AutoVorm, VormSection } from "vorm/components";
-import { useVorm, type VormSchema } from "vorm";
+import { useVorm, type VormSchema, type Option } from "vorm";
+import { ref } from "vue";
 
-const schema: VormSchema = [
+const schema = ref<VormSchema>([
+  //: VormSchema = [
   {
     name: "role",
     label: "Rolle:",
     type: "select",
-    options: ["User", "Admin", "Moderator"],
+    options: [
+      { label: "User", value: 1 },
+      { label: "Admin", value: 2 },
+      { label: "Moderator", value: 3, disabled: true },
+    ],
     validation: [{ rule: "required" }],
   },
   {
@@ -27,15 +33,23 @@ const schema: VormSchema = [
     label: "Allgemeine Notiz",
     type: "textarea",
   },
-];
-
-const { formData, validate } = useVorm(schema);
+]);
+const { formData, validate } = useVorm(schema.value);
 
 function submit() {
   const ok = validate();
   console.log("✅ Valid:", ok);
   console.log("📦 Data:", JSON.stringify(formData));
 }
+
+setTimeout(() => {
+  const modOption = (schema.value[0].options as Option[]).find(
+    (opt) => typeof opt === "object" && opt.label === "Moderator"
+  );
+  if (modOption && typeof modOption === "object") {
+    modOption.disabled = false;
+  }
+}, 3000);
 </script>
 
 <template>

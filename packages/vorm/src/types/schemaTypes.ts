@@ -2,6 +2,16 @@ import { type ValidationRule } from "./validatorTypes";
 
 export type ValidationMode = "onInput" | "onBlur" | "onSubmit";
 
+export type Option =
+  | string
+  | {
+      label: string;
+      value: string | number;
+      disabled?: boolean;
+    };
+
+type options = Option[] | ((formData: any) => Option[]);
+
 /**
  * Defines the types for a single form field
  */
@@ -21,7 +31,9 @@ export interface VormFieldSchema {
     | string; // erweiterbar für Custom-Types
   label?: string;
   showError?: boolean;
-  options?: string[] | ((formData: Record<string, any>) => string[]);
+  options?: Option[] | ((formData: any) => Option[]);
+  placeholder?: string;
+  helpText?: string;
   showIf?: Record<string, any> | ((formData: Record<string, any>) => boolean);
   validation?: ValidationRule[];
   visibility?: (formData: Record<string, any>) => boolean;

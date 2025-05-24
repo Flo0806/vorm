@@ -200,10 +200,18 @@ function getWrapperSlotName(fieldName: string): string {
   return match || "wrapper";
 }
 
-function resolveOptions(field: VormFieldSchema): string[] {
-  return typeof field.options === "function"
-    ? field.options(vorm.formData)
-    : field.options || [];
+function resolveOptions(
+  field: VormFieldSchema
+): { label: string; value: any; disabled?: boolean }[] {
+  const raw =
+    typeof field.options === "function"
+      ? field.options(vorm.formData)
+      : field.options || [];
+
+  return raw.map((opt) => {
+    if (typeof opt === "string") return { label: opt, value: opt };
+    return opt;
+  });
 }
 
 function renderDefaultInput(fieldName: string) {
@@ -230,7 +238,9 @@ function renderDefaultInput(fieldName: string) {
     return h(
       "select",
       inputProps,
-      resolveOptions(config).map((opt) => h("option", { value: opt }, opt))
+      resolveOptions(config).map((opt) =>
+        h("option", { value: opt.value, disabled: opt.disabled }, opt.label)
+      )
     );
   }
 
