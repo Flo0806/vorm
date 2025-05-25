@@ -18,6 +18,11 @@ export interface VormContext {
   validate: () => Promise<boolean>;
   validateFieldByName: (fieldName: string) => Promise<void>;
   getValidationMode: (fieldName: string) => ValidationMode;
+  resetForm: () => void;
+  touchAll: () => void;
+  getErrors: () => Record<string, string | null>;
+  getTouched: () => Record<string, boolean>;
+  getDirty: () => Record<string, boolean>;
 }
 
 export function useVorm(
@@ -127,38 +132,6 @@ export function useVorm(
     return results.every(Boolean);
   }
 
-  // async function validate(): Promise<boolean> {
-  //   const rawData = toRaw(formData); // entkoppelt von Vue-Reaktivität
-  //   let isValid = true;
-
-  //   const validations = schema.map(async (field) => {
-  //     touched[field.name] = true;
-
-  //     const error = await validateFieldAsync(field, rawData, errors);
-  //     errors[field.name] = error;
-  //     validatedFields[field.name] = true;
-
-  //     if (error) isValid = false;
-  //     return !error;
-  //   });
-
-  //   await Promise.all(validations);
-  //   return isValid;
-  // }
-
-  // async function validate(): Promise<boolean> {
-  //   const validations = schema.map(async (field) => {
-  //     touched[field.name] = true;
-  //     const error = await validateFieldAsync(field, formData, errors);
-  //     errors[field.name] = error;
-  //     validatedFields[field.name] = true;
-  //     return !error;
-  //   });
-
-  //   const results = await Promise.all(validations);
-  //   return results.every(Boolean);
-  // }
-
   async function validateFieldByName(fieldName: string): Promise<void> {
     const field = schema.find((f) => f.name === fieldName);
     if (field) {
@@ -174,6 +147,35 @@ export function useVorm(
     return field?.validationMode || globalValidationMode;
   }
 
+  function resetForm() {
+    schema.forEach((field) => {
+      formData[field.name] = "";
+      errors[field.name] = null;
+      validatedFields[field.name] = false;
+      touched[field.name] = false;
+      dirty[field.name] = false;
+      initial[field.name] = "";
+    });
+  }
+
+  function touchAll() {
+    schema.forEach((field) => {
+      touched[field.name] = true;
+    });
+  }
+
+  function getErrors() {
+    return { ...errors };
+  }
+
+  function getTouched() {
+    return { ...touched };
+  }
+
+  function getDirty() {
+    return { ...dirty };
+  }
+
   const context: VormContext = {
     schema,
     formData,
@@ -185,6 +187,11 @@ export function useVorm(
     validate,
     validateFieldByName,
     getValidationMode,
+    resetForm,
+    touchAll,
+    getErrors,
+    getTouched,
+    getDirty,
   };
 
   const key = options?.key || VormContextKey;

@@ -12,7 +12,7 @@ const schema = ref<VormSchema>([
     classes: {
       input: "my-input",
       help: "my-help",
-      outer: "form-grid-item",
+      outer: "form-grid-item-basic ",
     },
   },
   {
@@ -71,16 +71,13 @@ onMounted(() => {
 
   <!-- <AutoVorm :schema="schema" :showError="true"> -->
   <VormProvider context-key="test" v-model="formData">
-    <AutoVorm
-      as="form"
-      @submit="submitEvent"
-      container-class="form-grid-wrapper"
-    >
+    <AutoVorm as="form" @submit="submitEvent" layout="grid" :columns="2">
       <template #before-email>
-        <p class="text-xs text-blue-700 italic mb-2">
+        <div class="text-xs text-blue-700 italic mb-2">
           Bitte gib deine geschäftliche E-Mail-Adresse an.
-        </p>
+        </div>
       </template>
+
       <template #wrapper:[email]="{ field, content, state }">
         <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
           <label :for="field.name">Hier: {{ field.label }}</label>
@@ -143,8 +140,8 @@ label {
   border: 1px solid #ddd;
 }
 
-.form-grid-item {
-  grid-column: span 2;
+.form-grid-item-basic {
+  grid-column: 1;
 }
 
 .form-grid-item-2 {

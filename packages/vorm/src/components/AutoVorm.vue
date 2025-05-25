@@ -34,6 +34,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "submit", evt: SubmitEvent): void;
+  (e: "input", payload: any): void;
+  (e: "blur", payload: any): void;
+  (e: "validate", payload: any): void;
 }>();
 
 const vorm = useVormContext();
@@ -112,6 +115,31 @@ const fieldStates = computed(() =>
 //#endregion
 
 //#region Helper Functions
+function emitFieldEvent(
+  type: "input" | "blur" | "validate",
+  name: string,
+  value: any,
+  originalEvent?: Event
+) {
+  let prevented = false;
+
+  const payload = {
+    name,
+    value,
+    originalEvent,
+    field: getFieldConfig(name),
+    preventDefault: () => {
+      prevented = true;
+    },
+  };
+
+  // Explizit pro Fall casten
+  if (type === "input") emit("input", payload);
+  else if (type === "blur") emit("blur", payload);
+  else if (type === "validate") emit("validate", payload);
+  return !prevented;
+}
+
 function getFieldConfig(name: string): VormFieldSchema {
   return (
     expandedSchema.value.find((f) => f.name === name) || {
@@ -131,6 +159,7 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   const mode = vorm.getValidationMode(fieldName);
   if (mode === trigger) {
     vorm.validateFieldByName(fieldName);
+    emitFieldEvent("validate", fieldName, vorm.formData[fieldName]);
   }
 }
 
@@ -223,14 +252,21 @@ function renderDefaultInput(fieldName: string) {
     class: ["input", config.classes?.input],
     value,
     onInput: (e: any) => {
-      setValueByPath(vorm.formData, fieldName, e.target.value);
-      //vorm.formData[fieldName] = e.target.value;
-      vorm.dirty[fieldName] = e.target.value !== vorm.initial?.[fieldName];
-      maybeValidate("onInput", fieldName);
+      if (emitFieldEvent("input", fieldName, e.target.value, e)) {
+        setValueByPath(vorm.formData, fieldName, e.target.value);
+        vorm.dirty[fieldName] = e.target.value !== vorm.initial?.[fieldName];
+        maybeValidate("onInput", fieldName);
+      }
     },
-    onBlur: () => {
+    onBlur: (e: any) => {
       vorm.touched[fieldName] = true;
       maybeValidate("onBlur", fieldName);
+      emitFieldEvent(
+        "blur",
+        fieldName,
+        getValueByPath(vorm.formData, fieldName),
+        e
+      );
     },
   };
 
@@ -260,6 +296,10 @@ function renderFieldContent(fieldName: string) {
   }
   return renderDefaultInput(fieldName);
 }
+//#endregion
+
+//#region Exposes
+
 //#endregion
 
 onMounted(() => {
@@ -305,6 +345,15 @@ onMounted(() => {
       );
     }
   }
+});
+
+defineExpose({
+  reset: () => vorm.resetForm(),
+  touchAll: () => vorm.touchAll(),
+  getErrors: () => vorm.getErrors(),
+  getTouched: () => vorm.getTouched(),
+  getDirty: () => vorm.getDirty(),
+  validate: () => vorm.validate(),
 });
 </script>
 

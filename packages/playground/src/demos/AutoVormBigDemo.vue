@@ -34,6 +34,7 @@ const schema: VormSchema = Array.from({ length: 500 }).map((_, i) => {
 // });
 
 const { validate } = useVorm(schema);
+
 async function onSubmit() {
   console.time("validate");
   await validate();
@@ -53,15 +54,15 @@ async function onSubmit() {
       layout="grid"
       :columns="2"
     >
-      <template #wrapper="{ field, content, state }">
+      <!-- <template #wrapper="{ field, content, state }">
         <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
           <label :for="field.name">Hier: {{ field.label }}</label>
           <component :is="content()" />
-          <!-- <p v-if="state.error" class="text-red-500 text-xs">
+          <p v-if="state.error" class="text-red-500 text-xs">
             {{ state.error }}
-          </p> -->
+          </p>
         </div>
-      </template>
+      </template> -->
 
       <!-- <template #field20="{ field, state }">
           <VormInput

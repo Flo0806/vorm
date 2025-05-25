@@ -4,7 +4,6 @@ import { useVorm, type VormSchema, type Option } from "vorm";
 import { ref } from "vue";
 
 const schema = ref<VormSchema>([
-  //: VormSchema = [
   {
     name: "role",
     label: "Rolle:",
@@ -32,14 +31,33 @@ const schema = ref<VormSchema>([
     name: "notes",
     label: "Allgemeine Notiz",
     type: "textarea",
+    validation: [{ rule: "required" }],
   },
 ]);
-const { formData, validate } = useVorm(schema.value);
+
+const {
+  formData,
+  validate,
+  resetForm,
+  touchAll,
+  getErrors,
+  getTouched,
+  getDirty,
+} = useVorm(schema.value);
 
 function submit() {
   const ok = validate();
   console.log("✅ Valid:", ok);
   console.log("📦 Data:", JSON.stringify(formData));
+}
+
+function reset() {
+  resetForm();
+  console.log("🔄 Form zurückgesetzt");
+}
+
+function logEvent(type: string, e: any) {
+  console.log(`📣 ${type}`, e);
 }
 
 setTimeout(() => {
@@ -55,14 +73,22 @@ setTimeout(() => {
 <template>
   <VormProvider v-model="formData">
     <VormSection title="Rollenbasierte Anzeige">
-      <AutoVorm layout="grid" :columns="2" />
+      <AutoVorm
+        layout="grid"
+        :columns="2"
+        @input="(e) => logEvent('input', e)"
+        @blur="(e) => logEvent('blur', e)"
+        @validate="(e) => logEvent('validate', e)"
+      />
     </VormSection>
-    <button
-      @click="submit"
-      class="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
-    >
-      Absenden
-    </button>
+    <div class="flex gap-4 mt-4">
+      <button @click="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
+        Absenden
+      </button>
+      <button @click="reset" class="bg-gray-500 text-white px-4 py-2 rounded">
+        Zurücksetzen
+      </button>
+    </div>
   </VormProvider>
 </template>
 
@@ -81,6 +107,6 @@ setTimeout(() => {
 .vorm-horizontal select,
 .vorm-horizontal textarea {
   flex: 1 1 auto;
-  min-width: 0; /* wichtig für overflow */
+  min-width: 0;
 }
 </style>
