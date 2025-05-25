@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import VormInput from "../components/VormInput.vue";
 import { useVorm, type VormSchema } from "vorm";
 import { AutoVorm, VormProvider } from "vorm/components";
 
@@ -49,8 +48,9 @@ async function onSubmit() {
   </VormProvider>
   <hr />
   <h3>Context Key 2 (Form2)</h3>
-
-  <AutoVorm />
+  <VormProvider :contextKey="contextKey2" v-model="test2.formData">
+    <AutoVorm />
+  </VormProvider>
 
   <button @click="onSubmit" style="margin-top: 1rem">Submit Both</button>
 </template>

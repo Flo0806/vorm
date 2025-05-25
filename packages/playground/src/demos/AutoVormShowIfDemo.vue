@@ -35,15 +35,7 @@ const schema = ref<VormSchema>([
   },
 ]);
 
-const {
-  formData,
-  validate,
-  resetForm,
-  touchAll,
-  getErrors,
-  getTouched,
-  getDirty,
-} = useVorm(schema.value);
+const { formData, validate, resetForm } = useVorm(schema.value);
 
 function submit() {
   const ok = validate();
