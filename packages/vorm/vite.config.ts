@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 
@@ -9,6 +9,11 @@ export default defineConfig({
       vorm: path.resolve(__dirname, "../vorm/src"),
       "vorm/components": path.resolve(__dirname, "../vorm/src/components"),
     },
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./test/setup.ts",
   },
   build: {
     lib: {
