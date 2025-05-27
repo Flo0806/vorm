@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { AutoVorm } from "vorm/components";
-import { matchField, useVorm, type VormSchema } from "vorm";
-import { ref } from "vue";
+import { matchField, useVorm, type Option, type VormSchema } from "vorm";
+import { onMounted, reactive, ref } from "vue";
+const testDisabled = ref<boolean>(true);
 
-const schema = ref<VormSchema>([
+const schema: VormSchema = reactive([
   {
     name: "firstName",
     type: "text",
@@ -33,11 +34,44 @@ const schema = ref<VormSchema>([
     fields: [
       { name: "name", type: "text", label: "Name" },
       { name: "email", type: "email", label: "E-Mail", inheritWrapper: true },
+      {
+        name: "phones",
+        type: "repeater",
+        fields: [
+          { name: "number", label: "Nummer", type: "text" },
+          {
+            name: "Testoption",
+            type: "select",
+            options: [
+              { label: "User", value: 1 },
+              { label: "Admin", value: 2 },
+              { label: "Moderator", value: 3, disabled: testDisabled },
+            ],
+          },
+        ],
+      },
     ],
   },
 ]);
 
-const { formData, errors, validate } = useVorm(schema.value); // { formData, errors, validate }
+const { formData, errors, validate } = useVorm(schema); // { formData, errors, validate }
+
+onMounted(() => {
+  setTimeout(() => {
+    formData.contacts[0].phones[1].number = "123456789";
+  }, 5000);
+
+  setTimeout(() => {
+    testDisabled.value = false;
+    // console.log("schema", schema[2]);
+    // const modOption = (
+    //   schema[2].fields![2].fields![1].options as Option[]
+    // ).find((opt) => typeof opt === "object" && opt.label === "Moderator");
+    // if (modOption && typeof modOption === "object") {
+    //   modOption.disabled = false;
+    // }
+  }, 3000);
+});
 
 async function onSubmit() {
   if (await validate()) console.log("Form 1 valid:", formData);
@@ -89,7 +123,22 @@ function submitEvent(e: SubmitEvent) {
   <button
     type="button"
     class="btn mt-4"
-    @click="formData.contacts.push({ name: '', email: '' })"
+    @click="
+      {
+        const newContact = {
+          name: '',
+          email: '',
+          phones: [{ number: 'Test123' }],
+        };
+
+        formData.contacts.push(newContact);
+
+        // optional: direkt weiteren phone-Eintrag hinzufügen
+        newContact.phones.push({ number: 'Zweitnummer' });
+
+        console.log(formData.contacts);
+      }
+    "
   >
     ➕ Ansprechpartner hinzufügen
   </button>
