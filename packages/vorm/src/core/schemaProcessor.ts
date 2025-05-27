@@ -1,4 +1,4 @@
-import type { VormFieldSchema } from "../types/schemaTypes";
+import type { Option, VormFieldSchema } from "../types/schemaTypes";
 
 export function isFieldVisible(
   field: VormFieldSchema,
@@ -13,7 +13,7 @@ export function isFieldVisible(
 export function getFieldOptions(
   field: VormFieldSchema,
   formData: Record<string, any>
-): string[] {
+): Option[] {
   if (typeof field.options === "function") {
     return field.options(formData);
   }
