@@ -1,7 +1,7 @@
 import type { VormSchema } from "../types/schemaTypes";
 
 /**
- * Wandelt ein geschachteltes VormSchema in eine flache Liste mit Namenspfaden wie "contacts[0].email"
+ * Converts a nested VormSchema into a flat list with name paths like "contacts[0].email"
  */
 export function expandSchema(
   schema: VormSchema,
