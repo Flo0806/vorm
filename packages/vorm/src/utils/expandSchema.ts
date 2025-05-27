@@ -12,20 +12,19 @@ export function expandSchema(
 
   for (const field of schema) {
     const fullName = basePath ? `${basePath}.${field.name}` : field.name;
-
-    if (field.type === "repeater" && Array.isArray(formData[field.name])) {
-      const items = formData[field.name] as any[];
-
-      items.forEach((item, index) => {
-        const prefix = `${field.name}[${index}]`;
-        const nested = expandSchema(field.fields || [], item, prefix);
-        result.push(...nested);
-      });
+    if (field.type === "repeater") {
+      const items = formData[field.name];
+      if (Array.isArray(items)) {
+        items.forEach((item, index) => {
+          const prefix = basePath
+            ? `${basePath}.${field.name}[${index}]`
+            : `${field.name}[${index}]`;
+          const nested = expandSchema(field.fields || [], item, prefix);
+          result.push(...nested);
+        });
+      }
     } else {
-      result.push({
-        ...field,
-        name: fullName,
-      });
+      result.push({ ...field, name: fullName });
     }
   }
 
