@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { VormProvider, AutoVorm, VormSection } from "vorm/components";
 import { useVorm, type VormSchema, type Option } from "vorm";
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 
-const schema = ref<VormSchema>([
+const schema: VormSchema = reactive([
   {
     name: "role",
     label: "Rolle:",
@@ -35,7 +35,7 @@ const schema = ref<VormSchema>([
   },
 ]);
 
-const { formData, validate, resetForm } = useVorm(schema.value);
+const { formData, validate, resetForm } = useVorm(schema);
 
 function submit() {
   const ok = validate();
@@ -53,7 +53,7 @@ function logEvent(type: string, e: any) {
 }
 
 setTimeout(() => {
-  const modOption = (schema.value[0].options as Option[]).find(
+  const modOption = (schema[0].options as Option[]).find(
     (opt) => typeof opt === "object" && opt.label === "Moderator"
   );
   if (modOption && typeof modOption === "object") {

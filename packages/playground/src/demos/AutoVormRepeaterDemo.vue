@@ -32,7 +32,7 @@ const schema = ref<VormSchema>([
     validation: [{ rule: "required" }],
     fields: [
       { name: "name", type: "text", label: "Name" },
-      { name: "email", type: "email", label: "E-Mail" },
+      { name: "email", type: "email", label: "E-Mail", inheritWrapper: true },
     ],
   },
 ]);
@@ -58,9 +58,16 @@ function submitEvent(e: SubmitEvent) {
         Bitte gib deine geschäftliche E-Mail-Adresse an.
       </p>
     </template>
-    <template #wrapper:[email]="{ field, content, state }">
+    <template #wrapper:email="{ field, content, state }">
       <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
         <label :for="field.name">Hier: {{ field.label }}</label>
+        <component :is="content()" />
+        <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
+      </div>
+    </template>
+    <template #wrapper:[contacts.email]="{ field, content, state }">
+      <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
+        <label :for="field.name">Hier teswt: {{ field.label }}</label>
         <component :is="content()" />
         <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
       </div>

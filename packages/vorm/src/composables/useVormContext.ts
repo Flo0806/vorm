@@ -3,7 +3,7 @@ import { VormActiveContextKey, VormContextKey } from "../core/vormContext";
 import { type VormContext } from "./useVorm";
 
 export function useVormContext(key?: symbol | string): VormContext {
-  const providedKey = inject(VormActiveContextKey, VormContextKey); // Holt _aktuellen_ Key oder fallback
+  const providedKey = inject(VormActiveContextKey, VormContextKey); // Get the current active context key
 
   const activeKey = key || providedKey;
 

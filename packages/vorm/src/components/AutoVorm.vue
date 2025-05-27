@@ -12,7 +12,10 @@ import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
 import { expandSchema } from "../utils/expandSchema";
 import { getValueByPath, setValueByPath } from "../utils/pathHelpers";
-import { slotFieldMatchesPattern } from "../utils/slotMatcher";
+import {
+  getAncestryNames,
+  slotFieldMatchesPattern,
+} from "../utils/slotMatcher";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -64,19 +67,6 @@ const visibleFieldNames = computed(() => {
       : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
   });
 });
-
-// const visibleFieldNames = computed(() => {
-//   const baseNames = props.only || vorm.schema.map((f) => f.name);
-//   return baseNames.filter((name) => {
-//     const config = vorm.schema.find((f) => f.name === name);
-//     if (!config) return false;
-//     const showIf = config.showIf;
-//     if (!showIf) return true;
-//     return typeof showIf === "function"
-//       ? showIf(vorm.formData)
-//       : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
-//   });
-// });
 
 const fieldStates = computed(() =>
   Object.fromEntries(
@@ -163,11 +153,6 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   }
 }
 
-// function parseWrapperSlotNames(slotName: string): string[] {
-//   if (!slotName.startsWith("wrapper:")) return [];
-//   const raw = slotName.slice(8).replace(/[[\]\s]/g, "");
-//   return raw.split(/[:,]/);
-// }
 function parseWrapperSlotNames(slotName: string): string[] {
   if (!slotName.startsWith("wrapper:")) return [];
 
@@ -182,13 +167,6 @@ function parseWrapperSlotNames(slotName: string): string[] {
   return [raw]; // einzelner Name wie "contacts:email"
 }
 
-// function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
-//   return Object.keys(slots).some((name) => {
-//     if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
-//     return parseWrapperSlotNames(name).includes(fieldName);
-//   });
-// }
-
 function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
   const field = getFieldConfig(fieldName);
 
@@ -198,6 +176,17 @@ function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
       return false;
 
     const patterns = parseWrapperSlotNames(slotName);
+    console.log(
+      "Test",
+      patterns,
+      patterns.some((pattern) =>
+        slotFieldMatchesPattern(
+          fieldName,
+          pattern,
+          field.inheritWrapper === true
+        )
+      )
+    );
 
     return patterns.some((pattern) =>
       slotFieldMatchesPattern(fieldName, pattern, field.inheritWrapper === true)
@@ -205,28 +194,24 @@ function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
   });
 }
 
-// function getWrapperSlotName(fieldName: string): string {
-//   const match = Object.keys(slots).find((name) => {
-//     if (name === `wrapper:${fieldName}` || name === "wrapper") return false;
-//     return parseWrapperSlotNames(name).includes(fieldName);
-//   });
-//   return match || "wrapper";
-// }
-
 function getWrapperSlotName(fieldName: string): string {
-  const match = Object.keys(slots).find((slotName) => {
-    if (!slotName.startsWith("wrapper:")) return false;
-    if (slotName === `wrapper:${fieldName}` || slotName === "wrapper")
-      return false;
+  const directName = `wrapper:${fieldName}`;
+  if (hasSlot(directName)) return directName;
 
-    const patterns = parseWrapperSlotNames(slotName);
+  const ancestry = getAncestryNames(fieldName); // z. B. ["contacts.business.email", "business.email", "email"]
+  const candidateSlots = Object.keys(slots).filter(
+    (slotName) => slotName.startsWith("wrapper:") && slotName !== "wrapper"
+  );
 
-    return patterns.some((pattern) =>
-      slotFieldMatchesPattern(fieldName, pattern)
-    );
-  });
+  for (const ancestor of ancestry) {
+    const match = candidateSlots.find((slotName) => {
+      const patterns = parseWrapperSlotNames(slotName);
+      return patterns.includes(ancestor);
+    });
+    if (match) return match;
+  }
 
-  return match || "wrapper";
+  return "wrapper"; // Fallback
 }
 
 function resolveOptions(
@@ -296,10 +281,6 @@ function renderFieldContent(fieldName: string) {
   }
   return renderDefaultInput(fieldName);
 }
-//#endregion
-
-//#region Exposes
-
 //#endregion
 
 onMounted(() => {
