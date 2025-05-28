@@ -16,6 +16,7 @@ import {
   getAncestryNames,
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
+import { updateFieldValue } from "../utils/eventHelper";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -147,6 +148,7 @@ function hasSlot(name: string): boolean {
 
 function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   const mode = vorm.getValidationMode(fieldName);
+  console.log(mode, trigger, fieldName);
   if (mode === trigger) {
     vorm.validateFieldByName(fieldName);
     emitFieldEvent("validate", fieldName, vorm.formData[fieldName]);
@@ -224,13 +226,13 @@ function renderDefaultInput(fieldName: string) {
     id: fieldName,
     name: fieldName,
     class: ["input", config.classes?.input],
+    type:
+      config.type !== "select" && config.type !== "textarea"
+        ? config.type
+        : undefined,
     value,
     onInput: (e: any) => {
-      if (emitFieldEvent("input", fieldName, e.target.value, e)) {
-        setValueByPath(vorm.formData, fieldName, e.target.value);
-        vorm.dirty[fieldName] = e.target.value !== vorm.initial?.[fieldName];
-        maybeValidate("onInput", fieldName);
-      }
+      updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate);
     },
     onBlur: (e: any) => {
       vorm.touched[fieldName] = true;

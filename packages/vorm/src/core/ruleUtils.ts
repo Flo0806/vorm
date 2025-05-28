@@ -9,7 +9,12 @@ export const builtInRules: Record<
   SyncValidatorFn | AsyncValidatorFn
 > = {
   required: (value) => {
-    if (value === null || value === undefined || value === "") {
+    if (
+      value === null ||
+      value === undefined ||
+      value === "" ||
+      value === false
+    ) {
       return { message: "This field is required.", params: ["Test"] };
     }
     return null;

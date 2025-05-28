@@ -25,6 +25,18 @@ const schema = ref<VormSchema>([
     ],
     validationMode: "onBlur",
   },
+  {
+    name: "acceptTerms",
+    type: "checkbox",
+    label: "I accept the terms and conditions",
+    validation: [{ rule: "required", message: "You must accept the terms" }],
+  },
+  {
+    name: "startDate",
+    type: "datetime-local",
+    label: "Datum:",
+    validation: [{ rule: "required", message: "You must set a date" }],
+  },
 ]);
 
 const { formData, errors, validate } = useVorm(schema.value, { key: "test" }); // { formData, errors, validate }
