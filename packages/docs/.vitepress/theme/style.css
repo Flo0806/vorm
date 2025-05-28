@@ -1,0 +1,47 @@
+:root {
+  --vp-home-hero-name-color: #5daa83; /* Ersetze durch deine Wunschfarbe */
+  /* Primärer Button (theme: brand) */
+  --vp-button-brand-bg: #5daa83; /* Hintergrundfarbe */
+  --vp-button-brand-border: #5daa83; /* Rahmen */
+  --vp-button-brand-text: #ffffff; /* Textfarbe */
+
+  --vp-button-brand-hover-bg: #45916b;
+  --vp-button-brand-hover-border: #45916b;
+  --vp-button-brand-hover-text: #ffffff;
+
+  --vp-button-brand-active-bg: #3b7f5a;
+
+  /* Sekundärer Button (theme: alt) */
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-border: #5daa83;
+  --vp-button-alt-text: #5daa83;
+
+  --vp-button-alt-hover-bg: #transparent;
+  --vp-button-alt-hover-border: #45916b;
+  --vp-button-alt-hover-text: #ffffff;
+
+  --vp-button-alt-active-bg: #3b7f5a;
+}
+
+.VPHomeHero .name {
+  color: green; /* deine Wunschfarbe */
+}
+
+.Layout {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.Layout.name.clip {
+  color: yellow;
+}
+
+.VPButton.brand {
+  background-color: #5daa83;
+  color: white;
+}
+.VPButton.alt {
+  border-color: #5daa83;
+  color: #5daa83;
+}
