@@ -158,7 +158,7 @@ export function useVorm(
   }
 
   /**
-   * Reset the form data and errors
+   * Reset the form data, states (touched, dirty) and errors
    */
   function resetForm() {
     schema.forEach((field) => {
