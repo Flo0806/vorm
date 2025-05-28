@@ -11,7 +11,7 @@ import {
 import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
 import { expandSchema } from "../utils/expandSchema";
-import { getValueByPath, setValueByPath } from "../utils/pathHelpers";
+import { getValueByPath } from "../utils/pathHelpers";
 import {
   getAncestryNames,
   slotFieldMatchesPattern,
@@ -26,7 +26,6 @@ const register = inject<(meta: { as?: string }) => void>(
 const props = defineProps<{
   layout?: "stacked" | "horizontal" | "grid";
   columns?: number;
-  gridClass?: string;
   fieldWrapperClass?: string;
   only?: string[];
   errorClass?: any;
@@ -49,13 +48,7 @@ const slots = useSlots();
 //#region Computed Properties
 const expandedSchema = computed(() => expandSchema(vorm.schema, vorm.formData));
 
-const defaultGridClass = computed(() => {
-  if (props.layout === "grid") {
-    return `grid grid-cols-${props.columns || 1} gap-4`;
-  }
-  return "flex flex-col gap-4";
-});
-
+// Visibility of fields based on the `only` prop or schema `showIf` configuration
 const visibleFieldNames = computed(() => {
   const baseNames = props.only || expandedSchema.value.map((f) => f.name);
   return baseNames.filter((name) => {
@@ -69,6 +62,7 @@ const visibleFieldNames = computed(() => {
   });
 });
 
+// States of all fields in the form
 const fieldStates = computed(() =>
   Object.fromEntries(
     visibleFieldNames.value.map((fieldName) => {
@@ -106,6 +100,14 @@ const fieldStates = computed(() =>
 //#endregion
 
 //#region Helper Functions
+/**
+ * Emit an event for a field, handling input, blur, and validation events.
+ * It prevents the default action if preventDefault is called.
+ * @param type - The type of event: "input", "blur", or "validate"
+ * @param name - The name of the field
+ * @param value - The value of the field
+ * @param originalEvent - The original event object (optional)
+ */
 function emitFieldEvent(
   type: "input" | "blur" | "validate",
   name: string,
@@ -124,13 +126,18 @@ function emitFieldEvent(
     },
   };
 
-  // Explizit pro Fall casten
+  // Call explicit event handlers
   if (type === "input") emit("input", payload);
   else if (type === "blur") emit("blur", payload);
   else if (type === "validate") emit("validate", payload);
   return !prevented;
 }
 
+/**
+ * Get the configuration for a field by its name.
+ * If the field is not found, it returns a default configuration.
+ * @param name
+ */
 function getFieldConfig(name: string): VormFieldSchema {
   return (
     expandedSchema.value.find((f) => f.name === name) || {
@@ -146,6 +153,11 @@ function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
+/**
+ * Check if the field should be validated based on the trigger and validation mode.
+ * @param trigger
+ * @param fieldName
+ */
 function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   const mode = vorm.getValidationMode(fieldName);
   console.log(mode, trigger, fieldName);
@@ -155,10 +167,14 @@ function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   }
 }
 
+/**
+ * Parse the slot name for wrapper slots.
+ * @param slotName
+ */
 function parseWrapperSlotNames(slotName: string): string[] {
   if (!slotName.startsWith("wrapper:")) return [];
 
-  // Behalte das Format in [] → z. B. wrapper:[contacts:email,foo:bar]
+  // Hold the format in [] → e.g. wrapper:[contacts:email,foo:bar]
   const raw = slotName.slice(8).trim(); // "contacts:email,foo:bar"
 
   if (raw.startsWith("[") && raw.endsWith("]")) {
@@ -169,6 +185,10 @@ function parseWrapperSlotNames(slotName: string): string[] {
   return [raw];
 }
 
+/**
+ * Check if there is a slot that matches the fieldName with a wrapper prefix in a list.
+ * @param fieldName
+ */
 function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
   const field = getFieldConfig(fieldName);
 
@@ -185,6 +205,13 @@ function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
   });
 }
 
+/**
+ * Get the slot name for a wrapper that matches the fieldName.
+ * It checks for direct matches first, then looks for ancestor patterns.
+ * If no match is found, it returns the default "wrapper" slot.
+ 
+ * @param fieldName 
+ */
 function getWrapperSlotName(fieldName: string): string {
   const directName = `wrapper:${fieldName}`;
   if (hasSlot(directName)) return directName;
@@ -205,6 +232,12 @@ function getWrapperSlotName(fieldName: string): string {
   return "wrapper"; // Fallback
 }
 
+/**
+ * Resolve the options for a select field.
+ * If options is a function, it calls it with the current form data.
+ * Otherwise, it returns the options directly.
+ * @param field
+ */
 function resolveOptions(
   field: VormFieldSchema
 ): { label: string; value: any; disabled?: boolean }[] {
@@ -219,9 +252,13 @@ function resolveOptions(
   });
 }
 
+/**
+ * Render the default input element based on the field type.
+ * @param fieldName
+ */
 function renderDefaultInput(fieldName: string) {
   const config = getFieldConfig(fieldName);
-  const value = getValueByPath(vorm.formData, fieldName); // vorm.formData[fieldName];
+  const value = getValueByPath(vorm.formData, fieldName);
   const inputProps = {
     id: fieldName,
     name: fieldName,
@@ -259,6 +296,11 @@ function renderDefaultInput(fieldName: string) {
   return h(config.type === "textarea" ? "textarea" : "input", inputProps);
 }
 
+/**
+ * Render the content of a field. Check if a slot exists and return a wrapper if it does.
+ * If no slot is found, it renders the default input based on the field type.
+ * @param fieldName
+ */
 function renderFieldContent(fieldName: string) {
   if (hasSlot(fieldName)) {
     return h(
@@ -300,7 +342,7 @@ onMounted(() => {
     });
   });
 
-  // Submit-Warnungen
+  // Submit warning checks
   const isForm = props.as === "form";
   const hasSubmitListener = !!getCurrentInstance()?.vnode.props?.onSubmit;
 
@@ -332,7 +374,7 @@ defineExpose({
 <template>
   <component
     :is="props.as || 'div'"
-    :class="containerClass || gridClass || defaultGridClass"
+    :class="containerClass || undefined"
     :style="containerStyle"
     @submit.prevent="emit('submit', $event)"
   >

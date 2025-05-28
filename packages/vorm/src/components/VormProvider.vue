@@ -18,24 +18,24 @@ function registerVorm(meta: { as?: string }) {
 
 provide("registerVorm", registerVorm);
 
-// Context holen
+// Get context from parent
 const context = inject<VormContext>(key as InjectionKey<VormContext>);
 if (!context) {
   throw new Error(`[Vorm] No context provided for key: ${String(key)}`);
 }
 
-// Model synchronisieren
+// Sync modelValue with context formData
 Object.keys(props.modelValue).forEach((fieldKey) => {
   context.formData[fieldKey] = props.modelValue[fieldKey];
 });
 
-// Context bereitstellen
+// Provide the context to child components
 provide(key as InjectionKey<VormContext>, context);
 
 // New get the current key
 provide(VormActiveContextKey, key);
 
-// DOM Zugriff vorbereiten
+// Reference to the wrapper element
 const wrapperRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
