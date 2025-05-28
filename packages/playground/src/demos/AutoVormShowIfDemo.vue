@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { VormProvider, AutoVorm, VormSection } from "vorm/components";
 import { useVorm, type VormSchema, type Option } from "vorm";
-import { reactive, ref } from "vue";
+import { reactive } from "vue";
 
 const schema: VormSchema = reactive([
   {

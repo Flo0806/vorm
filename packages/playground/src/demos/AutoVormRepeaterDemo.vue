@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AutoVorm } from "vorm/components";
-import { matchField, useVorm, type Option, type VormSchema } from "vorm";
+import { matchField, useVorm, type VormSchema } from "vorm";
 import { onMounted, reactive, ref } from "vue";
 const testDisabled = ref<boolean>(true);
 
