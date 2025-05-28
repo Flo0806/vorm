@@ -10,8 +10,6 @@ export type Option =
       disabled?: boolean;
     };
 
-type options = Option[] | ((formData: any) => Option[]);
-
 /**
  * Defines the types for a single form field
  */

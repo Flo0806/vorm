@@ -164,7 +164,7 @@ function parseWrapperSlotNames(slotName: string): string[] {
     return list.split(",").map((s) => s.trim()); // ['contacts:email', 'foo:bar']
   }
 
-  return [raw]; // einzelner Name wie "contacts:email"
+  return [raw];
 }
 
 function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
@@ -176,17 +176,6 @@ function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
       return false;
 
     const patterns = parseWrapperSlotNames(slotName);
-    console.log(
-      "Test",
-      patterns,
-      patterns.some((pattern) =>
-        slotFieldMatchesPattern(
-          fieldName,
-          pattern,
-          field.inheritWrapper === true
-        )
-      )
-    );
 
     return patterns.some((pattern) =>
       slotFieldMatchesPattern(fieldName, pattern, field.inheritWrapper === true)
@@ -198,7 +187,7 @@ function getWrapperSlotName(fieldName: string): string {
   const directName = `wrapper:${fieldName}`;
   if (hasSlot(directName)) return directName;
 
-  const ancestry = getAncestryNames(fieldName); // z. B. ["contacts.business.email", "business.email", "email"]
+  const ancestry = getAncestryNames(fieldName); // e.g. ["contacts.business.email", "business.email", "email"]
   const candidateSlots = Object.keys(slots).filter(
     (slotName) => slotName.startsWith("wrapper:") && slotName !== "wrapper"
   );
