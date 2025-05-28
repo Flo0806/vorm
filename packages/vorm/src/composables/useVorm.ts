@@ -51,12 +51,7 @@ export function useVorm(
     initial[name] = isRepeater ? [] : "";
     validatedFields[name] = false;
 
-    // formData[name] = "";
-    // errors[name] = null;
-    // touched[name] = false;
-    // dirty[name] = false;
-    // initial[name] = "";
-    // Default set `showError` to true if not defined
+    // Set default showError if not defined
     field.showError === undefined
       ? (field.showError = true)
       : (field.showError = false);
@@ -76,9 +71,13 @@ export function useVorm(
     { deep: true }
   );
 
+  /**
+   * Sync the schema with the current form data
+   * @param newSchema - The new schema to sync with
+   */
   function syncSchema(newSchema: VormSchema) {
+    // Update schema reference
     const validNames = new Set(newSchema.map((f) => f.name));
-    console.log(newSchema);
     for (const field of newSchema) {
       const name = field.name;
       if (!(name in formData)) formData[name] = "";
@@ -90,7 +89,7 @@ export function useVorm(
       if (field.showError === undefined) field.showError = true;
     }
 
-    // Optional: alte Felder entfernen
+    // Remove fields that are no longer in the schema
     for (const key of Object.keys(formData)) {
       if (!validNames.has(key)) {
         delete formData[key];
@@ -103,9 +102,11 @@ export function useVorm(
     }
   }
 
+  /**
+   * Complete form validation function
+   */
   async function validate(): Promise<boolean> {
     const raw = toRaw(formData);
-    let isValid = true;
 
     const validations = schema.map(async (field) => {
       const value = raw[field.name];
@@ -118,7 +119,6 @@ export function useVorm(
         if (error) {
           errors[field.name] = error;
           validatedFields[field.name] = true;
-          isValid = false;
           return false; // early exit for this field
         }
       }
@@ -132,6 +132,11 @@ export function useVorm(
     return results.every(Boolean);
   }
 
+  /**
+   * Validate a specific field by name
+   * @param fieldName - The name of the field to validate
+   * @returns A promise that resolves when the field is validated
+   */
   async function validateFieldByName(fieldName: string): Promise<void> {
     const field = schema.find((f) => f.name === fieldName);
     if (field) {
@@ -142,11 +147,19 @@ export function useVorm(
     }
   }
 
+  /**
+   * Get the validation mode for a specific field
+   * @param fieldName
+   * @returns
+   */
   function getValidationMode(fieldName: string): ValidationMode {
     const field = schema.find((f) => f.name === fieldName);
     return field?.validationMode || globalValidationMode;
   }
 
+  /**
+   * Reset the form data and errors
+   */
   function resetForm() {
     schema.forEach((field) => {
       formData[field.name] = "";
@@ -158,20 +171,35 @@ export function useVorm(
     });
   }
 
+  /**
+   * Mark all fields as touched
+   */
   function touchAll() {
     schema.forEach((field) => {
       touched[field.name] = true;
     });
   }
 
+  /**
+   * Returns the current errors
+   * @returns The current errors
+   */
   function getErrors() {
     return { ...errors };
   }
 
+  /**
+   * Returns the current touched state
+   * @returns The current touched state of the form
+   */
   function getTouched() {
     return { ...touched };
   }
 
+  /**
+   * Returns the current dirty state
+   * @returns The current dirty state of the form
+   */
   function getDirty() {
     return { ...dirty };
   }

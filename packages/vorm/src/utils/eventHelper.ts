@@ -25,6 +25,7 @@ export function getValueFromEvent(e: Event, fieldType: string): any {
       if (target instanceof HTMLInputElement) {
         return target.valueAsDate; // For datetime-local, we can use valueAsDate
       }
+      return target.value;
     case "select":
       if ((target as HTMLSelectElement).multiple) {
         return Array.from((target as HTMLSelectElement).selectedOptions).map(
