@@ -7,7 +7,6 @@ import {
   type StyleValue,
   getCurrentInstance,
   inject,
-  Fragment,
 } from "vue";
 import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
@@ -19,7 +18,6 @@ import {
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
 import { updateFieldValue } from "../utils/eventHelper";
-import path from "path";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -36,7 +34,13 @@ const props = defineProps<{
   as?: string;
   containerClass?: string;
   containerStyle?: StyleValue;
+  excludeRepeaters?: boolean;
 }>();
+
+const basePath = computed(() => {
+  if (props.only?.length === 1) return props.only[0];
+  return "";
+});
 
 const emit = defineEmits<{
   (e: "submit", evt: SubmitEvent): void;
@@ -52,27 +56,83 @@ const defaultGridClass = computed(() => {
   if (props.layout === "grid") {
     return `vorm-grid vorm-grid-cols-${props.columns || 1}`;
   }
-  return "vorm-group"; // for stacked
+  return "vorm-group";
 });
 
-//#region Computed Properties
-const expandedSchema = computed(() => expandSchema(vorm.schema, vorm.formData));
+/**
+ * Retrieves a nested schema from a given path
+ */
+function getSubSchemaAt(
+  schema: VormFieldSchema[],
+  path: string
+): VormFieldSchema[] {
+  const parts = path.split(/\.|\[\d+\]/g).filter(Boolean);
+  let current: VormFieldSchema[] = schema;
 
-// Visibility of fields based on the `only` prop or schema `showIf` configuration
+  for (const part of parts) {
+    const found = current.find((f) => f.name === part && f.type === "repeater");
+    if (!found || !found.fields) return [];
+    current = found.fields;
+  }
+
+  return current;
+}
+
+/**
+ * Collects all repeater paths from the schema recursively
+ */
+function collectRepeaterPaths(schema: VormFieldSchema[], path = ""): string[] {
+  const paths: string[] = [];
+  for (const field of schema) {
+    const fullPath = path ? `${path}.${field.name}` : field.name;
+    if (field.type === "repeater") {
+      paths.push(fullPath);
+      if (field.fields) {
+        const nested = collectRepeaterPaths(field.fields, `${fullPath}[0]`);
+        paths.push(...nested);
+      }
+    }
+  }
+  return paths;
+}
+
+/**
+ * Resolves visible field names, respecting exclusion and only rules
+ */
 const visibleFieldNames = computed(() => {
-  const baseNames = props.only || expandedSchema.value.map((f) => f.name);
-  return baseNames.filter((name) => {
-    const config = expandedSchema.value.find((f) => f.name === name);
-    if (!config) return false;
-    const showIf = config.showIf;
-    if (!showIf) return true;
-    return typeof showIf === "function"
-      ? showIf(vorm.formData)
-      : Object.entries(showIf).every(([k, v]) => vorm.formData[k] === v);
+  const schemaSegment = basePath.value
+    ? getSubSchemaAt(vorm.schema, basePath.value)
+    : vorm.schema;
+  const pathPrefix = basePath.value || "";
+  const excludePaths = props.excludeRepeaters
+    ? collectRepeaterPaths(schemaSegment, pathPrefix)
+    : [];
+
+  const allFields = expandSchema(vorm.schema, vorm.formData, "", true)
+    .map((f) => f.name)
+    .filter((name) => {
+      if (!props.excludeRepeaters) return true;
+      return !excludePaths.some(
+        (prefix) => name === prefix || name.startsWith(`${prefix}[`)
+      );
+    });
+
+  if (!props.only || props.only.length === 0) return allFields;
+
+  return allFields.filter((name) => {
+    return props.only!.some((pattern) => {
+      return (
+        name === pattern ||
+        name.startsWith(`${pattern}.`) ||
+        name.startsWith(`${pattern}[`)
+      );
+    });
   });
 });
 
-// States of all fields in the form
+/**
+ * Builds up field states for each visible field
+ */
 const fieldStates = computed(() =>
   Object.fromEntries(
     visibleFieldNames.value.map((fieldName) => {
@@ -107,16 +167,36 @@ const fieldStates = computed(() =>
     })
   )
 );
-//#endregion
 
-//#region Helper Functions
 /**
- * Emit an event for a field, handling input, blur, and validation events.
- * It prevents the default action if preventDefault is called.
- * @param type - The type of event: "input", "blur", or "validate"
- * @param name - The name of the field
- * @param value - The value of the field
- * @param originalEvent - The original event object (optional)
+ * Returns the field config for the given field name
+ */
+function getFieldConfig(name: string): VormFieldSchema {
+  const exact = expandSchema(vorm.schema, vorm.formData).find(
+    (f) => f.name === name
+  );
+  if (exact) return exact;
+
+  const rawValue = getValueByPath(vorm.formData, name);
+  if (Array.isArray(rawValue)) {
+    return {
+      name,
+      type: "repeater",
+      label: name.split(".").pop() ?? "",
+      fields: [],
+    };
+  }
+
+  return {
+    name,
+    type: "text",
+    label: "",
+    showError: true,
+  };
+}
+
+/**
+ * Emits synthetic input/blur/validate events
  */
 function emitFieldEvent(
   type: "input" | "blur" | "validate",
@@ -125,7 +205,6 @@ function emitFieldEvent(
   originalEvent?: Event
 ) {
   let prevented = false;
-
   const payload = {
     name,
     value,
@@ -135,8 +214,6 @@ function emitFieldEvent(
       prevented = true;
     },
   };
-
-  // Call explicit event handlers
   if (type === "input") emit("input", payload);
   else if (type === "blur") emit("blur", payload);
   else if (type === "validate") emit("validate", payload);
@@ -144,154 +221,26 @@ function emitFieldEvent(
 }
 
 /**
- * Get the configuration for a field by its name.
- * If the field is not found, it returns a default configuration.
- * @param name
+ * Resolves field options if defined dynamically
  */
-function getFieldConfig(name: string): VormFieldSchema {
-  return (
-    expandedSchema.value.find((f) => f.name === name) || {
-      name,
-      type: "text",
-      label: "",
-      showError: true,
-    }
-  );
-}
-
-function isRepeaterField(fieldName: string): boolean {
-  return /\[\d+\]/.test(fieldName);
-}
-
-/**
- * Check if a slot exists for a given name.
- * @param name
- */
-function hasSlot(name: string): boolean {
-  return Object.prototype.hasOwnProperty.call(slots, name);
-}
-
-/**
- * Check if a field has a direct slot or an ancestry slot.
- * @param fieldName
- */
-function hasDirectOrAncestrySlot(fieldName: string): boolean {
-  const field = getFieldConfig(fieldName);
-
-  // If inheritWrapper is explicitly false, check only the direct slot
-  if (field.inheritWrapper === undefined || field.inheritWrapper === false) {
-    return hasSlot(normalizeFieldName(fieldName));
-  }
-  // If inheritWrapper is true, check direct and ancestry slots
-  const ancestry = getAncestryNames(fieldName); // ["contacts[0].email", "contacts.email", "email"]
-  return ancestry.some((name) => hasSlot(normalizeFieldName(name)));
-}
-
-/**
- * Check if the field should be validated based on the trigger and validation mode.
- * @param trigger
- * @param fieldName
- */
-function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
-  const mode = vorm.getValidationMode(fieldName);
-  if (mode === trigger) {
-    vorm.validateFieldByName(fieldName);
-    emitFieldEvent("validate", fieldName, vorm.formData[fieldName]);
-  }
-}
-
-/**
- * Parse the slot name for wrapper slots.
- * @param slotName
- */
-function parseWrapperSlotNames(slotName: string): string[] {
-  if (!slotName.startsWith("wrapper:")) return [];
-
-  // Hold the format in [] → e.g. wrapper:[contacts:email,foo:bar]
-  const raw = slotName.slice(8).trim(); // "contacts:email,foo:bar"
-
-  if (raw.startsWith("[") && raw.endsWith("]")) {
-    const list = raw.slice(1, -1); // ohne []
-    return list.split(",").map((s) => s.trim()); // ['contacts:email', 'foo:bar']
-  }
-
-  return [raw];
-}
-
-/**
- * Check if there is a slot that matches the fieldName with a wrapper prefix in a list.
- * @param fieldName
- */
-function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
-  const field = getFieldConfig(fieldName);
-
-  return Object.keys(slots).some((slotName) => {
-    if (!slotName.startsWith("wrapper:")) return false;
-    if (slotName === `wrapper:${fieldName}` || slotName === "wrapper")
-      return false;
-
-    const patterns = parseWrapperSlotNames(slotName);
-
-    return patterns.some((pattern) =>
-      slotFieldMatchesPattern(fieldName, pattern, field.inheritWrapper === true)
-    );
-  });
-}
-
-/**
- * Get the slot name for a wrapper that matches the fieldName.
- * It checks for direct matches first, then looks for ancestor patterns.
- * If no match is found, it returns the default "wrapper" slot.
-
- * @param fieldName
- */
-function getWrapperSlotName(fieldName: string): string {
-  const directName = `wrapper:${fieldName}`;
-  if (hasSlot(directName)) return directName;
-
-  const ancestry = getAncestryNames(fieldName); // e.g. ["contacts.business.email", "business.email", "email"]
-  const candidateSlots = Object.keys(slots).filter(
-    (slotName) => slotName.startsWith("wrapper:") && slotName !== "wrapper"
-  );
-
-  for (const ancestor of ancestry) {
-    const match = candidateSlots.find((slotName) => {
-      const patterns = parseWrapperSlotNames(slotName);
-      return patterns.includes(ancestor);
-    });
-    if (match) return match;
-  }
-
-  return "wrapper"; // Fallback
-}
-
-/**
- * Resolve the options for a select field.
- * If options is a function, it calls it with the current form data.
- * Otherwise, it returns the options directly.
- * @param field
- */
-function resolveOptions(
-  field: VormFieldSchema
-): { label: string; value: any; disabled?: boolean }[] {
+function resolveOptions(field: VormFieldSchema) {
   const raw =
     typeof field.options === "function"
       ? field.options(vorm.formData)
       : field.options || [];
-
-  return raw.map((opt) => {
-    if (typeof opt === "string") return { label: opt, value: opt };
-    return opt;
-  });
+  return raw.map((opt) =>
+    typeof opt === "string" ? { label: opt, value: opt } : opt
+  );
 }
 
 /**
- * Render the default input element based on the field type.
- * @param fieldName
+ * Default renderer for native inputs
  */
 function renderDefaultInput(fieldName: string) {
   const config = getFieldConfig(fieldName);
   const value = getValueByPath(vorm.formData, fieldName);
+  if (typeof value === "object" && value !== null) return null;
+
   const inputProps = {
     id: `vorm-${fieldName}`,
     name: fieldName,
@@ -301,9 +250,8 @@ function renderDefaultInput(fieldName: string) {
         ? config.type
         : undefined,
     value,
-    onInput: (e: any) => {
-      updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate);
-    },
+    onInput: (e: any) =>
+      updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
     onBlur: (e: any) => {
       vorm.touched[fieldName] = true;
       maybeValidate("onBlur", fieldName);
@@ -329,112 +277,113 @@ function renderDefaultInput(fieldName: string) {
   return h(config.type === "textarea" ? "textarea" : "input", inputProps);
 }
 
-function getBestSlotName(fieldName: string): string | undefined {
-  const field = getFieldConfig(fieldName);
-
-  if (field.inheritWrapper === undefined || field.inheritWrapper === false) {
-    const direct = normalizeFieldName(fieldName);
-    return hasSlot(direct) ? direct : undefined;
-  }
-
-  const ancestry = getAncestryNames(fieldName); // von spezifisch zu allgemein
-  return ancestry.find((name) => hasSlot(normalizeFieldName(name)));
-}
-
 /**
- * Render the content of a field. Check if a slot exists and return a wrapper if it does.
- * If no slot is found, it renders the default input based on the field type.
- * @param fieldName
+ * Renders slot or input content
  */
 function renderFieldContent(fieldName: string) {
-  const slotName = getBestSlotName(fieldName);
   const field = getFieldConfig(fieldName);
-  const indexes = extractRepeaterIndexes(fieldName);
-  const path = fieldName;
-
-  if (slotName && slots[slotName]) {
+  if (slots[fieldName]) {
     return h(
-      Fragment,
-      null,
-      slots[slotName]!({
+      "div",
+      {},
+      slots[fieldName]?.({
         field,
         state: fieldStates.value[fieldName],
-        indexes,
-        path,
+        path: fieldName,
+        indexes: extractRepeaterIndexes(fieldName),
       })
     );
   }
-
   return renderDefaultInput(fieldName);
 }
 
-// function renderFieldContent(fieldName: string) {
-//   const slotName = getBestSlotName(fieldName);
-//   if (!slotName) return renderDefaultInput(fieldName);
+/**
+ * Validation logic on interaction
+ */
+function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
+  const mode = vorm.getValidationMode(fieldName);
+  if (mode === trigger) {
+    vorm.validateFieldByName(fieldName);
+    emitFieldEvent("validate", fieldName, vorm.formData[fieldName]);
+  }
+}
 
-//   const slot = slots[slotName];
-//   const nodes = slot?.({
-//     field: getFieldConfig(fieldName),
-//     state: fieldStates.value[fieldName],
-//     indexes: extractRepeaterIndexes(fieldName),
-//   });
+/**
+ * Wrapper slot matching and resolution
+ */
+function hasSlot(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(slots, name);
+}
 
-//   return h(Fragment, null, nodes);
-// }
-//#endregion
+function parseWrapperSlotNames(slotName: string): string[] {
+  if (!slotName.startsWith("wrapper:")) return [];
+  const raw = slotName.slice(8).trim();
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    return raw
+      .slice(1, -1)
+      .split(",")
+      .map((s) => s.trim());
+  }
+  return [raw];
+}
+
+function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
+  const field = getFieldConfig(fieldName);
+  return Object.keys(slots).some((slotName) => {
+    if (!slotName.startsWith("wrapper:")) return false;
+    if (slotName === `wrapper:${fieldName}` || slotName === "wrapper")
+      return false;
+    const patterns = parseWrapperSlotNames(slotName);
+    return patterns.some((pattern) =>
+      slotFieldMatchesPattern(fieldName, pattern, field.inheritWrapper === true)
+    );
+  });
+}
+
+function getWrapperSlotName(fieldName: string): string {
+  const directName = `wrapper:${fieldName}`;
+  if (hasSlot(directName)) return directName;
+
+  const ancestry = getAncestryNames(fieldName);
+  const candidateSlots = Object.keys(slots).filter(
+    (slotName) => slotName.startsWith("wrapper:") && slotName !== "wrapper"
+  );
+
+  for (const ancestor of ancestry) {
+    const match = candidateSlots.find((slotName) => {
+      const patterns = parseWrapperSlotNames(slotName);
+      return patterns.includes(ancestor);
+    });
+    if (match) return match;
+  }
+
+  return "wrapper";
+}
+
+function hasDirectOrAncestrySlot(fieldName: string): boolean {
+  const field = getFieldConfig(fieldName);
+  if (!field.inheritWrapper) {
+    return hasSlot(normalizeFieldName(fieldName));
+  }
+  const ancestry = getAncestryNames(fieldName);
+  return ancestry.some((name) => hasSlot(normalizeFieldName(name)));
+}
 
 onMounted(() => {
-  // Register the component with the parent VormProvider
   register({ as: props.as });
-
-  Object.keys(slots).forEach((slotName) => {
-    if (["default", "fallback", "root", "_", "wrapper"].includes(slotName))
-      return;
-
-    const name = slotName.startsWith("#") ? slotName.slice(1) : slotName;
-    const raw = name
-      .replace(/^before-/, "")
-      .replace(/^after-/, "")
-      .replace(/^wrapper:/, "")
-      .replace(/[\[\]\s]/g, "");
-    const fieldCandidates = raw.split(/[.,]/).map((n) => n.trim());
-
-    fieldCandidates.forEach((field) => {
-      const exists = vorm.schema.some((f) => f.name === field);
-      if (!exists) {
-        console.error(
-          `[AutoVorm] Slot "${slotName}" does not match any field in schema.`
-        );
-      }
-    });
-  });
-
-  // Submit warning checks
   const isForm = props.as === "form";
   const hasSubmitListener = !!getCurrentInstance()?.vnode.props?.onSubmit;
 
   if (import.meta.env.DEV) {
     if (isForm && !hasSubmitListener) {
-      console.warn(
-        "[AutoVorm] 'as=\"form\"' is set, but no @submit listener – the form cannot be submitted."
-      );
+      console.warn("[AutoVorm] 'as=\"form\"' is set, but no @submit listener.");
     }
-
     if (!isForm && hasSubmitListener) {
       console.warn(
-        "[AutoVorm] @submit listener is set, but 'as' is not 'form' – submit will never be triggered."
+        "[AutoVorm] @submit listener is set, but 'as' is not 'form'."
       );
     }
   }
-});
-
-defineExpose({
-  reset: () => vorm.resetForm(),
-  touchAll: () => vorm.touchAll(),
-  getErrors: () => vorm.getErrors(),
-  getTouched: () => vorm.getTouched(),
-  getDirty: () => vorm.getDirty(),
-  validate: () => vorm.validate(),
 });
 </script>
 

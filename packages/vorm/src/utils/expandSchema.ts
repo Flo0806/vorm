@@ -6,27 +6,72 @@ import type { VormSchema } from "../types/schemaTypes";
 export function expandSchema(
   schema: VormSchema,
   formData: Record<string, any>,
-  basePath = ""
+  pathPrefix = "",
+  exposeRepeaters = false
 ): VormSchema {
-  const result: VormSchema = [];
+  const flat: VormSchema = [];
 
   for (const field of schema) {
-    const fullName = basePath ? `${basePath}.${field.name}` : field.name;
+    const fullName = pathPrefix ? `${pathPrefix}.${field.name}` : field.name;
+
     if (field.type === "repeater") {
       const items = formData[field.name];
-      if (Array.isArray(items)) {
-        items.forEach((item, index) => {
-          const prefix = basePath
-            ? `${basePath}.${field.name}[${index}]`
-            : `${field.name}[${index}]`;
-          const nested = expandSchema(field.fields || [], item, prefix);
-          result.push(...nested);
-        });
+
+      // ✅ Defensive check
+      if (!Array.isArray(items)) continue;
+
+      if (exposeRepeaters) {
+        flat.push({ ...field, name: fullName });
       }
+
+      for (let i = 0; i < items.length; i++) {
+        const nestedPath = pathPrefix
+          ? `${pathPrefix}.${field.name}[${i}]`
+          : `${field.name}[${i}]`;
+
+        const nestedSchema = expandSchema(
+          field.fields || [],
+          items[i],
+          nestedPath,
+          exposeRepeaters
+        );
+
+        flat.push(...nestedSchema);
+      }
+
+      continue;
     } else {
-      result.push({ ...field, name: fullName });
+      flat.push({ ...field, name: fullName });
     }
   }
 
-  return result;
+  return flat;
 }
+
+// export function expandSchema(
+//   schema: VormSchema,
+//   formData: Record<string, any>,
+//   basePath = ""
+// ): VormSchema {
+//   const result: VormSchema = [];
+
+//   for (const field of schema) {
+//     const fullName = basePath ? `${basePath}.${field.name}` : field.name;
+//     if (field.type === "repeater") {
+//       const items = formData[field.name];
+//       if (Array.isArray(items)) {
+//         items.forEach((item, index) => {
+//           const prefix = basePath
+//             ? `${basePath}.${field.name}[${index}]`
+//             : `${field.name}[${index}]`;
+//           const nested = expandSchema(field.fields || [], item, prefix);
+//           result.push(...nested);
+//         });
+//       }
+//     } else {
+//       result.push({ ...field, name: fullName });
+//     }
+//   }
+
+//   return result;
+// }
