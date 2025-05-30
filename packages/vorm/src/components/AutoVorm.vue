@@ -12,13 +12,14 @@ import {
 import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
 import { expandSchema } from "../utils/expandSchema";
-import { getValueByPath } from "../utils/pathHelpers";
+import { getValueByPath, extractRepeaterIndexes } from "../utils/pathHelpers";
 import {
   getAncestryNames,
   normalizeFieldName,
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
 import { updateFieldValue } from "../utils/eventHelper";
+import path from "path";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -158,6 +159,10 @@ function getFieldConfig(name: string): VormFieldSchema {
   );
 }
 
+function isRepeaterField(fieldName: string): boolean {
+  return /\[\d+\]/.test(fieldName);
+}
+
 /**
  * Check if a slot exists for a given name.
  * @param name
@@ -174,19 +179,11 @@ function hasDirectOrAncestrySlot(fieldName: string): boolean {
   const field = getFieldConfig(fieldName);
 
   // If inheritWrapper is explicitly false, check only the direct slot
-  if (field.inheritWrapper === false) {
-    const result = hasSlot(normalizeFieldName(fieldName));
-
-    return false;
+  if (field.inheritWrapper === undefined || field.inheritWrapper === false) {
+    return hasSlot(normalizeFieldName(fieldName));
   }
   // If inheritWrapper is true, check direct and ancestry slots
   const ancestry = getAncestryNames(fieldName); // ["contacts[0].email", "contacts.email", "email"]
-  console.log(
-    "ancestor names",
-    ancestry,
-    fieldName,
-    ancestry.some((name) => hasSlot(normalizeFieldName(name)))
-  );
   return ancestry.some((name) => hasSlot(normalizeFieldName(name)));
 }
 
@@ -197,7 +194,6 @@ function hasDirectOrAncestrySlot(fieldName: string): boolean {
  */
 function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
   const mode = vorm.getValidationMode(fieldName);
-  console.log(mode, trigger, fieldName);
   if (mode === trigger) {
     vorm.validateFieldByName(fieldName);
     emitFieldEvent("validate", fieldName, vorm.formData[fieldName]);
@@ -336,7 +332,7 @@ function renderDefaultInput(fieldName: string) {
 function getBestSlotName(fieldName: string): string | undefined {
   const field = getFieldConfig(fieldName);
 
-  if (field.inheritWrapper === false) {
+  if (field.inheritWrapper === undefined || field.inheritWrapper === false) {
     const direct = normalizeFieldName(fieldName);
     return hasSlot(direct) ? direct : undefined;
   }
@@ -352,16 +348,39 @@ function getBestSlotName(fieldName: string): string | undefined {
  */
 function renderFieldContent(fieldName: string) {
   const slotName = getBestSlotName(fieldName);
-  if (!slotName) return renderDefaultInput(fieldName);
+  const field = getFieldConfig(fieldName);
+  const indexes = extractRepeaterIndexes(fieldName);
+  const path = fieldName;
 
-  const slot = slots[slotName];
-  const nodes = slot?.({
-    field: getFieldConfig(fieldName),
-    state: fieldStates.value[fieldName],
-  });
+  if (slotName && slots[slotName]) {
+    return h(
+      Fragment,
+      null,
+      slots[slotName]!({
+        field,
+        state: fieldStates.value[fieldName],
+        indexes,
+        path,
+      })
+    );
+  }
 
-  return h(Fragment, null, nodes);
+  return renderDefaultInput(fieldName);
 }
+
+// function renderFieldContent(fieldName: string) {
+//   const slotName = getBestSlotName(fieldName);
+//   if (!slotName) return renderDefaultInput(fieldName);
+
+//   const slot = slots[slotName];
+//   const nodes = slot?.({
+//     field: getFieldConfig(fieldName),
+//     state: fieldStates.value[fieldName],
+//     indexes: extractRepeaterIndexes(fieldName),
+//   });
+
+//   return h(Fragment, null, nodes);
+// }
 //#endregion
 
 onMounted(() => {
@@ -438,6 +457,8 @@ defineExpose({
         :field="getFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
+        :indexes="extractRepeaterIndexes(fieldName)"
+        :path="fieldName"
       />
 
       <slot
@@ -446,6 +467,8 @@ defineExpose({
         :field="getFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
+        :indexes="extractRepeaterIndexes(fieldName)"
+        :path="fieldName"
       />
 
       <slot
@@ -454,6 +477,8 @@ defineExpose({
         :field="getFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
+        :indexes="extractRepeaterIndexes(fieldName)"
+        :path="fieldName"
       />
 
       <component
@@ -466,7 +491,7 @@ defineExpose({
         :class="getFieldConfig(fieldName).classes?.outer ? getFieldConfig(fieldName).classes!.outer : fieldWrapperClass || 'vorm-group'"
       >
         <label
-          :for="fieldName"
+          :for="'vorm-' + fieldName"
           v-bind="
             getFieldConfig(fieldName).classes?.label
               ? { class: getFieldConfig(fieldName).classes?.label }

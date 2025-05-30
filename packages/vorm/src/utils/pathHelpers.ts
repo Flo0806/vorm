@@ -1,3 +1,5 @@
+import type { VormSchema } from "../types/schemaTypes.js";
+
 export function getValueByPath(obj: any, path: string): any {
   return path
     .replace(/\[(\d+)\]/g, ".$1")
@@ -42,4 +44,36 @@ export function setValueByPath(obj: any, path: string, value: any): void {
   } else {
     current[last] = value;
   }
+}
+
+export function extractRepeaterIndex(path: string): number | undefined {
+  const match = path.match(/\[(\d+)\]/);
+  return match ? Number(match[1]) : undefined;
+}
+
+/**
+ * Gibt ein Objekt aller Repeater-Indexes im Pfad zurück.
+ * Beispiel: "contacts[0].business[1].email" → { contacts: 0, 'contacts[0].business': 1 }
+ */
+export function extractRepeaterIndexes(
+  fieldName: string
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  const parts = fieldName.split(".");
+
+  let path = "";
+
+  for (const part of parts) {
+    const match = part.match(/^([a-zA-Z0-9_]+)\[(\d+)\]$/);
+    if (match) {
+      const key = match[1];
+      const index = parseInt(match[2], 10);
+      path = path ? `${path}.${key}` : key;
+      result[path] = index;
+    } else {
+      path = path ? `${path}.${part}` : part;
+    }
+  }
+  console.log(result);
+  return result;
 }

@@ -38,27 +38,3 @@ export function slotFieldMatchesPattern(
 
   return false;
 }
-
-// export function slotFieldMatchesPattern(
-//   fieldName: string,
-//   pattern: string,
-//   allowInheritance = false
-// ): boolean {
-//   const normalize = (s: string) =>
-//     s
-//       .replace(/\[\d+\]/g, "") // contacts[0] → contacts
-//       .replace(/\s/g, "")
-//       .trim();
-
-//   const fn = normalize(fieldName); // e.g. contacts.email
-//   const pn = normalize(pattern); // e.g. contacts:email
-
-//   if (fn === pn) return true;
-//   console.log(allowInheritance, fn, pn);
-//   if (allowInheritance && pn.includes(".")) {
-//     const [group, sub] = pn.split("."); // contacts:email → ["contacts", "email"]
-//     return fn === `${group}.${sub}`;
-//   }
-
-//   return false;
-// }

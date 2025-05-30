@@ -6,6 +6,9 @@ import {
   compileField,
   type CompiledValidator,
 } from "../core/validatorCompiler.js";
+import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
+import { normalizeFieldName } from "../utils/slotMatcher.js";
+import { isFieldInSchema } from "../utils/isFieldInSchema.js";
 
 export interface VormContext {
   schema: VormSchema;
@@ -18,7 +21,21 @@ export interface VormContext {
   validate: () => Promise<boolean>;
   validateFieldByName: (fieldName: string) => Promise<void>;
   getValidationMode: (fieldName: string) => ValidationMode;
+  setFormData: (newData: Record<string, any>) => void;
+  updateField: (
+    name: string,
+    value: any,
+    options?: { touched?: boolean; dirty?: boolean; validate?: boolean }
+  ) => void;
+  updateFields: (
+    updates: Record<string, any>,
+    options?: { touched?: boolean; dirty?: boolean; validate?: boolean }
+  ) => void;
   resetForm: () => void;
+  addRepeaterItem: (path: string, item: any, index?: number) => void;
+  removeRepeaterItem: (path: string, index: number) => void;
+  moveRepeaterItem: (path: string, fromIndex: number, toIndex: number) => void;
+  clearRepeater: (path: string) => void;
   touchAll: () => void;
   getErrors: () => Record<string, string | null>;
   getTouched: () => Record<string, boolean>;
@@ -102,6 +119,115 @@ export function useVorm(
     }
   }
 
+  function setFormData(newData: Record<string, any>) {
+    resetForm();
+
+    for (const key of Object.keys(newData)) {
+      setValueByPath(formData, key, newData[key]);
+      setValueByPath(initial, key, newData[key]);
+    }
+  }
+
+  function updateField(
+    name: string,
+    value: any,
+    options?: {
+      touched?: boolean;
+      dirty?: boolean;
+      validate?: boolean;
+    }
+  ) {
+    if (!isFieldInSchema(name, schema)) {
+      console.warn(`[Vorm] updateField: "${name}" is not defined in schema.`);
+      return;
+    }
+
+    setValueByPath(formData, name, value);
+
+    if (options?.touched) touched[name] = true;
+    if (options?.dirty) dirty[name] = value !== initial[name];
+
+    if (options?.validate) {
+      validateFieldByName(name);
+      validatedFields[name] = true;
+    }
+  }
+
+  function updateFields(
+    updates: Record<string, any>,
+    options?: {
+      touched?: boolean;
+      dirty?: boolean;
+      validate?: boolean;
+    }
+  ) {
+    for (const name in updates) {
+      updateField(name, updates[name], options);
+    }
+  }
+  //#region Repeater handling
+  function addRepeaterItem(path: string, item: any, index?: number) {
+    const target = getValueByPath(formData, path);
+    if (!Array.isArray(target)) {
+      console.warn(`[Vorm] Cannot add item: "${path}" is not an array.`);
+      return;
+    }
+
+    const clone = JSON.parse(JSON.stringify(item)); // prevent reactivity pollution
+
+    if (typeof index === "number" && index >= 0 && index <= target.length) {
+      target.splice(index, 0, clone);
+    } else {
+      target.push(clone);
+    }
+
+    // mark as dirty
+    setValueByPath(dirty, path, true);
+  }
+
+  function removeRepeaterItem(path: string, index: number) {
+    const target = getValueByPath(formData, path);
+    if (!Array.isArray(target)) {
+      console.warn(`[Vorm] Cannot remove item: "${path}" is not an array.`);
+      return;
+    }
+
+    if (index < 0 || index >= target.length) return;
+
+    target.splice(index, 1);
+
+    // mark as dirty
+    setValueByPath(dirty, path, true);
+  }
+
+  function moveRepeaterItem(path: string, fromIndex: number, toIndex: number) {
+    const target = getValueByPath(formData, path);
+    if (!Array.isArray(target)) {
+      console.warn(`[Vorm] Cannot move item: "${path}" is not an array.`);
+      return;
+    }
+
+    if (
+      fromIndex < 0 ||
+      fromIndex >= target.length ||
+      toIndex < 0 ||
+      toIndex >= target.length
+    )
+      return;
+
+    const [moved] = target.splice(fromIndex, 1);
+    target.splice(toIndex, 0, moved);
+
+    setValueByPath(dirty, path, true);
+  }
+
+  function clearRepeater(path: string) {
+    setValueByPath(formData, path, []);
+    setValueByPath(dirty, path, true);
+  }
+
+  //#endregion
+
   /**
    * Complete form validation function
    */
@@ -162,12 +288,17 @@ export function useVorm(
    */
   function resetForm() {
     schema.forEach((field) => {
-      formData[field.name] = "";
-      errors[field.name] = null;
-      validatedFields[field.name] = false;
-      touched[field.name] = false;
-      dirty[field.name] = false;
-      initial[field.name] = "";
+      const key = field.name;
+      const defaultValue =
+        field.type === "checkbox" ? false : field.type === "repeater" ? [] : "";
+
+      setValueByPath(formData, key, defaultValue);
+      initial[key] = defaultValue;
+
+      errors[key] = null;
+      validatedFields[key] = false;
+      touched[key] = false;
+      dirty[key] = false;
     });
   }
 
@@ -215,7 +346,14 @@ export function useVorm(
     validate,
     validateFieldByName,
     getValidationMode,
+    setFormData,
+    updateField,
+    updateFields,
     resetForm,
+    addRepeaterItem,
+    removeRepeaterItem,
+    moveRepeaterItem,
+    clearRepeater,
     touchAll,
     getErrors,
     getTouched,
