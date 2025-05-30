@@ -1,4 +1,4 @@
-import { SyncValidatorFn } from "../types/validatorTypes";
+import type { SyncValidatorFn } from "../types/validatorTypes";
 
 /**
  * Function to validate that a value is in a specific format using a regex pattern.
