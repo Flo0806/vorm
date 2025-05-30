@@ -1,4 +1,4 @@
-import { SyncValidatorFn } from "../types/validatorTypes";
+import type { SyncValidatorFn } from "../types/validatorTypes";
 
 /**
  * Function to validate that a value is less than or equal to a maximum value.

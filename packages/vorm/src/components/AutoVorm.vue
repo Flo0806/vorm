@@ -7,6 +7,7 @@ import {
   type StyleValue,
   getCurrentInstance,
   inject,
+  Fragment,
 } from "vue";
 import { useVormContext } from "../composables/useVormContext";
 import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
@@ -14,6 +15,7 @@ import { expandSchema } from "../utils/expandSchema";
 import { getValueByPath } from "../utils/pathHelpers";
 import {
   getAncestryNames,
+  normalizeFieldName,
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
 import { updateFieldValue } from "../utils/eventHelper";
@@ -153,6 +155,26 @@ function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
+function hasDirectOrAncestrySlot(fieldName: string): boolean {
+  const field = getFieldConfig(fieldName);
+
+  // If inheritWrapper is explicitly false, check only the direct slot
+  if (field.inheritWrapper === false) {
+    const result = hasSlot(normalizeFieldName(fieldName));
+
+    return false;
+  }
+  // If inheritWrapper is true, check direct and ancestry slots
+  const ancestry = getAncestryNames(fieldName); // ["contacts[0].email", "contacts.email", "email"]
+  console.log(
+    "ancestor names",
+    ancestry,
+    fieldName,
+    ancestry.some((name) => hasSlot(normalizeFieldName(name)))
+  );
+  return ancestry.some((name) => hasSlot(normalizeFieldName(name)));
+}
+
 /**
  * Check if the field should be validated based on the trigger and validation mode.
  * @param trigger
@@ -209,8 +231,8 @@ function hasSlotMatchingWrapperMulti(fieldName: string): boolean {
  * Get the slot name for a wrapper that matches the fieldName.
  * It checks for direct matches first, then looks for ancestor patterns.
  * If no match is found, it returns the default "wrapper" slot.
- 
- * @param fieldName 
+
+ * @param fieldName
  */
 function getWrapperSlotName(fieldName: string): string {
   const directName = `wrapper:${fieldName}`;
@@ -260,9 +282,9 @@ function renderDefaultInput(fieldName: string) {
   const config = getFieldConfig(fieldName);
   const value = getValueByPath(vorm.formData, fieldName);
   const inputProps = {
-    id: fieldName,
+    id: `vorm-${fieldName}`,
     name: fieldName,
-    class: ["input", config.classes?.input],
+    class: config.classes?.input ?? `vorm-${config.type}`,
     type:
       config.type !== "select" && config.type !== "textarea"
         ? config.type
@@ -296,24 +318,47 @@ function renderDefaultInput(fieldName: string) {
   return h(config.type === "textarea" ? "textarea" : "input", inputProps);
 }
 
+function getBestSlotName(fieldName: string): string | undefined {
+  const field = getFieldConfig(fieldName);
+
+  if (field.inheritWrapper === false) {
+    const direct = normalizeFieldName(fieldName);
+    return hasSlot(direct) ? direct : undefined;
+  }
+
+  const ancestry = getAncestryNames(fieldName); // von spezifisch zu allgemein
+  return ancestry.find((name) => hasSlot(normalizeFieldName(name)));
+}
+
 /**
  * Render the content of a field. Check if a slot exists and return a wrapper if it does.
  * If no slot is found, it renders the default input based on the field type.
  * @param fieldName
  */
 function renderFieldContent(fieldName: string) {
-  if (hasSlot(fieldName)) {
-    return h(
-      "div",
-      {},
-      slots[fieldName]?.({
-        field: getFieldConfig(fieldName),
-        state: fieldStates.value[fieldName],
-      })
-    );
-  }
-  return renderDefaultInput(fieldName);
+  const slotName = getBestSlotName(fieldName);
+  if (!slotName) return renderDefaultInput(fieldName);
+
+  const slot = slots[slotName];
+  const nodes = slot?.({
+    field: getFieldConfig(fieldName),
+    state: fieldStates.value[fieldName],
+  });
+
+  return h(Fragment, null, nodes);
 }
+
+// function renderFieldContent(fieldName: string) {
+//   const slot = slots[fieldName];
+//   if (!slot) return renderDefaultInput(fieldName);
+
+//   const nodes = slot({
+//     field: getFieldConfig(fieldName),
+//     state: fieldStates.value[fieldName],
+//   });
+
+//   return h(Fragment, null, nodes);
+// }
 //#endregion
 
 onMounted(() => {
@@ -408,15 +453,28 @@ defineExpose({
         :content="() => renderFieldContent(fieldName)"
       />
 
+      <component
+        v-else-if="hasDirectOrAncestrySlot(fieldName)"
+        :is="renderFieldContent(fieldName)"
+      />
+
       <div
         v-else
-        :class="getFieldConfig(fieldName).classes?.outer ? getFieldConfig(fieldName).classes!.outer : fieldWrapperClass || 'flex flex-col gap-1'"
+        :class="getFieldConfig(fieldName).classes?.outer ? getFieldConfig(fieldName).classes!.outer : fieldWrapperClass || 'vorm-group'"
       >
         <label
           :for="fieldName"
-          :class="getFieldConfig(fieldName).classes?.label"
+          :class="
+            getFieldConfig(fieldName).classes?.label
+              ? getFieldConfig(fieldName).classes?.label
+              : undefined
+          "
         >
-          {{ hasSlot(fieldName) ? "" : getFieldConfig(fieldName).label }}
+          {{
+            hasDirectOrAncestrySlot(fieldName)
+              ? ""
+              : getFieldConfig(fieldName).label
+          }}
         </label>
         <component :is="renderFieldContent(fieldName)" />
 
@@ -425,7 +483,7 @@ defineExpose({
             getFieldConfig(fieldName).showError !== false &&
             fieldStates[fieldName].error
           "
-          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'text-red-500 text-sm'"
+          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'vorm-help'"
         >
           {{ fieldStates[fieldName].error }}
         </p>

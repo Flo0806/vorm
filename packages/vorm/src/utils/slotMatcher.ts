@@ -11,6 +11,10 @@ export function getAncestryNames(fieldName: string): string[] {
   return list;
 }
 
+export function normalizeFieldName(name: string): string {
+  return name.replace(/\[\d+\]/g, "");
+}
+
 export function slotFieldMatchesPattern(
   fieldName: string,
   pattern: string,

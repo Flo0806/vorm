@@ -12,3 +12,4 @@ export * from "./core/schemaProcessor";
 
 // Validation rules
 export * from "./validation/matchField";
+export * from "./validation";
