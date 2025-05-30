@@ -47,6 +47,13 @@ const emit = defineEmits<{
 const vorm = useVormContext();
 const slots = useSlots();
 
+const defaultGridClass = computed(() => {
+  if (props.layout === "grid") {
+    return `vorm-grid vorm-grid-cols-${props.columns || 1}`;
+  }
+  return "vorm-group"; // for stacked
+});
+
 //#region Computed Properties
 const expandedSchema = computed(() => expandSchema(vorm.schema, vorm.formData));
 
@@ -151,10 +158,18 @@ function getFieldConfig(name: string): VormFieldSchema {
   );
 }
 
+/**
+ * Check if a slot exists for a given name.
+ * @param name
+ */
 function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
 
+/**
+ * Check if a field has a direct slot or an ancestry slot.
+ * @param fieldName
+ */
 function hasDirectOrAncestrySlot(fieldName: string): boolean {
   const field = getFieldConfig(fieldName);
 
@@ -347,18 +362,6 @@ function renderFieldContent(fieldName: string) {
 
   return h(Fragment, null, nodes);
 }
-
-// function renderFieldContent(fieldName: string) {
-//   const slot = slots[fieldName];
-//   if (!slot) return renderDefaultInput(fieldName);
-
-//   const nodes = slot({
-//     field: getFieldConfig(fieldName),
-//     state: fieldStates.value[fieldName],
-//   });
-
-//   return h(Fragment, null, nodes);
-// }
 //#endregion
 
 onMounted(() => {
@@ -419,7 +422,7 @@ defineExpose({
 <template>
   <component
     :is="props.as || 'div'"
-    :class="containerClass || undefined"
+    :class="containerClass || defaultGridClass || undefined"
     :style="containerStyle"
     @submit.prevent="emit('submit', $event)"
   >
@@ -464,10 +467,10 @@ defineExpose({
       >
         <label
           :for="fieldName"
-          :class="
+          v-bind="
             getFieldConfig(fieldName).classes?.label
-              ? getFieldConfig(fieldName).classes?.label
-              : undefined
+              ? { class: getFieldConfig(fieldName).classes?.label }
+              : null
           "
         >
           {{
@@ -493,3 +496,35 @@ defineExpose({
     </template>
   </component>
 </template>
+
+<style scoped>
+.vorm-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.vorm-grid-cols-1 {
+  grid-template-columns: repeat(1, 1fr);
+}
+.vorm-grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.vorm-grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.vorm-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.vorm-col-span-1 {
+  grid-column: span 1 / span 1;
+}
+.vorm-col-span-2 {
+  grid-column: span 2 / span 2;
+}
+.vorm-col-span-3 {
+  grid-column: span 3 / span 3;
+}
+</style>
