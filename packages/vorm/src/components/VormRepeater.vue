@@ -14,6 +14,7 @@ const normalizedName = computed(() => normalizeRepeaterPath(props.name));
 const vorm = useVormContext();
 if (!vorm) throw new Error("VormRepeater must be used inside a VormProvider");
 
+// Items can be nested, so we need to handle both simple and complex repeaters
 const items = computed(() => {
   const parts = props.name.split(".");
   if (parts.length < 2) {

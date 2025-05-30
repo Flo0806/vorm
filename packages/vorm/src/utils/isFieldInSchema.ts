@@ -9,7 +9,7 @@ export function isFieldInSchema(name: string, schema: VormSchema): boolean {
       return true;
     }
 
-    // Prüfe auch Repeater-Felder rekursiv
+    // Check for nested fields in repeaters
     if (field.type === "repeater" && Array.isArray(field.fields)) {
       for (const subField of field.fields) {
         const nestedName = `${field.name}.${subField.name}`; // e.g. contacts.name

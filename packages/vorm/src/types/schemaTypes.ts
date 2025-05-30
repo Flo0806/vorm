@@ -26,7 +26,9 @@ export interface VormFieldSchema {
     | "datetime"
     | "email"
     | "password"
-    | string; // erweiterbar für Custom-Types
+    | string; // Custom types can be added
+  required?: boolean;
+  disabled?: boolean;
   label?: string;
   showError?: boolean;
   options?: Option[] | ((formData: any) => Option[]);

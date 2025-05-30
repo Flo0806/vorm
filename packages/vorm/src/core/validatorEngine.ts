@@ -68,7 +68,7 @@ async function applyRuleAsync(
       return null;
     }
 
-    // Nur awaiten, wenn nötig
+    // Handle both synchronous and asynchronous results
     const final = result instanceof Promise ? await result : result;
     if (!final) return null;
 
