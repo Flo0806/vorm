@@ -25,7 +25,7 @@ const register = inject<(meta: { as?: string }) => void>(
 );
 
 const props = defineProps<{
-  layout?: "stacked" | "horizontal" | "grid";
+  layout?: "grid";
   columns?: number;
   fieldWrapperClass?: string;
   only?: string[];
@@ -56,7 +56,7 @@ const defaultGridClass = computed(() => {
   if (props.layout === "grid") {
     return `vorm-grid vorm-grid-cols-${props.columns || 1}`;
   }
-  return "vorm-group";
+  return "vorm-container";
 });
 
 /**
@@ -109,25 +109,51 @@ const visibleFieldNames = computed(() => {
     : [];
 
   const allFields = expandSchema(vorm.schema, vorm.formData, "", true)
-    .map((f) => f.name)
-    .filter((name) => {
-      if (!props.excludeRepeaters) return true;
-      return !excludePaths.some(
-        (prefix) => name === prefix || name.startsWith(`${prefix}[`)
+    .filter((field) => {
+      // 1. Exclude repeater subfields
+      if (
+        props.excludeRepeaters &&
+        excludePaths.some(
+          (prefix) =>
+            field.name === prefix || field.name.startsWith(`${prefix}[`)
+        )
+      ) {
+        return false;
+      }
+
+      // 2. Apply showIf logic
+      const condition = field.showIf;
+      if (!condition) return true;
+
+      const path = field.name;
+
+      if (typeof condition === "function") {
+        return condition(vorm.formData, path);
+      }
+
+      if (typeof condition === "object" && "dependsOn" in condition) {
+        const relativePath = resolveRelativePath(path, condition.dependsOn);
+        const value = getValueByPath(vorm.formData, relativePath);
+        return condition.condition(value, vorm.formData, path);
+      }
+
+      // Default: match key/value pairs
+      return Object.entries(condition).every(
+        ([key, val]) => vorm.formData[key] === val
       );
-    });
+    })
+    .map((f) => f.name);
 
   if (!props.only || props.only.length === 0) return allFields;
 
-  return allFields.filter((name) => {
-    return props.only!.some((pattern) => {
-      return (
+  return allFields.filter((name) =>
+    props.only!.some(
+      (pattern) =>
         name === pattern ||
         name.startsWith(`${pattern}.`) ||
         name.startsWith(`${pattern}[`)
-      );
-    });
-  });
+    )
+  );
 });
 
 /**
@@ -167,6 +193,44 @@ const fieldStates = computed(() =>
     })
   )
 );
+
+/**
+ * Resolves a relative path based on a base path and a relative path
+ * @param basePath
+ * @param relative
+ */
+function resolveRelativePath(basePath: string, relative: string): string {
+  const baseParts = basePath.split(/(?=\[)|\./).filter(Boolean);
+  baseParts.pop(); // Remove last part, because it is the field name
+  const relativeParts = relative.split("/").filter(Boolean);
+  console.log(baseParts);
+
+  const stack: string[] = [];
+
+  for (const part of relativeParts) {
+    if (part === "..") {
+      const last = baseParts.pop();
+      if (last?.startsWith("[") && baseParts.length) {
+        baseParts.pop();
+      }
+    } else if (part !== ".") {
+      stack.push(part); // Neuen Teil anhängen
+    }
+  }
+  console.log(
+    "done",
+    [...baseParts, ...stack].reduce(
+      (acc, part) =>
+        acc + (part.startsWith("[") ? part : (acc ? "." : "") + part),
+      ""
+    )
+  );
+  return [...baseParts, ...stack].reduce(
+    (acc, part) =>
+      acc + (part.startsWith("[") ? part : (acc ? "." : "") + part),
+    ""
+  );
+}
 
 /**
  * Returns the field config for the given field name
@@ -224,11 +288,10 @@ function emitFieldEvent(
  * Resolves field options if defined dynamically
  */
 function resolveOptions(field: VormFieldSchema) {
-  const raw =
-    typeof field.options === "function"
-      ? field.options(vorm.formData)
-      : field.options || [];
-  return raw.map((opt) =>
+  const fromMap = vorm.fieldOptionsMap.get(field.name);
+  if (!fromMap) return [];
+
+  return fromMap.map((opt) =>
     typeof opt === "string" ? { label: opt, value: opt } : opt
   );
 }
@@ -287,6 +350,8 @@ function renderFieldContent(fieldName: string) {
       "div",
       {},
       slots[fieldName]?.({
+        name: fieldName,
+        slotName: fieldName,
         field,
         state: fieldStates.value[fieldName],
         path: fieldName,
@@ -403,6 +468,7 @@ onMounted(() => {
       <slot
         v-if="hasSlot(`wrapper:${fieldName}`)"
         :name="`wrapper:${fieldName}`"
+        :slotName="`wrapper:${fieldName}`"
         :field="getFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
@@ -413,6 +479,7 @@ onMounted(() => {
       <slot
         v-else-if="hasSlotMatchingWrapperMulti(fieldName)"
         :name="getWrapperSlotName(fieldName)"
+        :slotName="`wrapper:${fieldName}`"
         :field="getFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
@@ -423,6 +490,7 @@ onMounted(() => {
       <slot
         v-else-if="hasSlot('wrapper')"
         name="wrapper"
+        slotName="wrapper"
         :field="getFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"

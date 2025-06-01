@@ -1,5 +1,5 @@
 import { reactive, provide, watch, toRaw, type InjectionKey } from "vue";
-import type { VormSchema, ValidationMode } from "../types/schemaTypes";
+import type { VormSchema, ValidationMode, Option } from "../types/schemaTypes";
 import { validateFieldAsync } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
 import {
@@ -7,7 +7,6 @@ import {
   type CompiledValidator,
 } from "../core/validatorCompiler.js";
 import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
-import { normalizeFieldName } from "../utils/slotMatcher.js";
 import { isFieldInSchema } from "../utils/isFieldInSchema.js";
 
 export interface VormContext {
@@ -18,18 +17,34 @@ export interface VormContext {
   touched: Record<string, boolean>;
   dirty: Record<string, boolean>;
   initial: Record<string, any>;
+  fieldOptionsMap: Map<string, Option[]>;
   validate: () => Promise<boolean>;
   validateFieldByName: (fieldName: string) => Promise<void>;
   getValidationMode: (fieldName: string) => ValidationMode;
-  setFormData: (newData: Record<string, any>) => void;
+  setFormData: (
+    newData: Record<string, any>,
+    options?: {
+      fieldOptions?: Record<string, Option[]>;
+    }
+  ) => void;
   updateField: (
     name: string,
     value: any,
-    options?: { touched?: boolean; dirty?: boolean; validate?: boolean }
+    options?: {
+      touched?: boolean;
+      dirty?: boolean;
+      validate?: boolean;
+      fieldOptions?: Option[];
+    }
   ) => void;
   updateFields: (
     updates: Record<string, any>,
-    options?: { touched?: boolean; dirty?: boolean; validate?: boolean }
+    options?: {
+      touched?: boolean;
+      dirty?: boolean;
+      validate?: boolean;
+      fieldOptions?: Record<string, Option[]>;
+    }
   ) => void;
   resetForm: () => void;
   addRepeaterItem: (path: string, item: any, index?: number) => void;
@@ -56,9 +71,12 @@ export function useVorm(
   const dirty = reactive<Record<string, boolean>>({});
   const initial = reactive<Record<string, any>>({});
 
+  const compiledValidators = new Map<string, CompiledValidator[]>();
+  const compiledAffects = new Map<string, string[]>();
+  const fieldOptionsMap = new Map<string, Option[]>();
+
   schema.forEach((field) => {
     const name = field.name;
-
     const isRepeater = field.type === "repeater";
 
     formData[name] = isRepeater ? [] : "";
@@ -69,15 +87,20 @@ export function useVorm(
     validatedFields[name] = false;
 
     // Set default showError if not defined
-    field.showError === undefined
-      ? (field.showError = true)
-      : (field.showError = false);
-  });
+    field.showError = field.showError !== false;
 
-  const compiledValidators = new Map<string, CompiledValidator[]>();
+    // Compile validators
+    compiledValidators.set(name, compileField(field));
 
-  schema.forEach((field) => {
-    compiledValidators.set(field.name, compileField(field));
+    // Extract affects for cascading validation
+    const affects = (field.validation ?? []).flatMap((v) =>
+      typeof v === "object" && v.affects
+        ? Array.isArray(v.affects)
+          ? v.affects
+          : [v.affects]
+        : []
+    );
+    if (affects.length > 0) compiledAffects.set(name, affects);
   });
 
   watch(
@@ -119,12 +142,21 @@ export function useVorm(
     }
   }
 
-  function setFormData(newData: Record<string, any>) {
+  function setFormData(
+    newData: Record<string, any>,
+    options?: {
+      fieldOptions?: Record<string, Option[]>;
+    }
+  ) {
     resetForm();
 
     for (const key of Object.keys(newData)) {
       setValueByPath(formData, key, newData[key]);
       setValueByPath(initial, key, newData[key]);
+
+      if (options?.fieldOptions?.[key]) {
+        fieldOptionsMap.set(key, options.fieldOptions[key]);
+      }
     }
   }
 
@@ -135,6 +167,7 @@ export function useVorm(
       touched?: boolean;
       dirty?: boolean;
       validate?: boolean;
+      fieldOptions?: Option[];
     }
   ) {
     if (!isFieldInSchema(name, schema)) {
@@ -146,6 +179,10 @@ export function useVorm(
 
     if (options?.touched) touched[name] = true;
     if (options?.dirty) dirty[name] = value !== initial[name];
+
+    if (options?.fieldOptions) {
+      fieldOptionsMap.set(name, options.fieldOptions);
+    }
 
     if (options?.validate) {
       validateFieldByName(name);
@@ -159,12 +196,17 @@ export function useVorm(
       touched?: boolean;
       dirty?: boolean;
       validate?: boolean;
+      fieldOptions?: Record<string, Option[]>;
     }
   ) {
     for (const name in updates) {
-      updateField(name, updates[name], options);
+      updateField(name, updates[name], {
+        ...options,
+        fieldOptions: options?.fieldOptions?.[name],
+      });
     }
   }
+
   //#region Repeater handling
   function addRepeaterItem(path: string, item: any, index?: number) {
     const target = getValueByPath(formData, path);
@@ -234,27 +276,59 @@ export function useVorm(
   async function validate(): Promise<boolean> {
     const raw = toRaw(formData);
 
-    const validations = schema.map(async (field) => {
-      const value = raw[field.name];
-      touched[field.name] = true;
+    const tempErrors: Record<string, string | null> = {};
+    const tempValidated: Record<string, boolean> = {};
+    const tempTouched: Record<string, boolean> = {};
 
-      const validators = compiledValidators.get(field.name) || [];
+    const validations = schema.map(async (field) => {
+      const name = field.name;
+      const value = raw[name];
+      const validators = compiledValidators.get(name) || [];
+
+      tempTouched[name] = true;
 
       for (const validateFn of validators) {
         const error = await validateFn(value, raw);
         if (error) {
-          errors[field.name] = error;
-          validatedFields[field.name] = true;
+          tempErrors[name] = error;
+          tempValidated[name] = true;
+
+          const affects = compiledAffects.get(name);
+          if (affects?.length) {
+            for (const dep of affects) {
+              if (!tempErrors[dep]) {
+                tempErrors[dep] = error;
+                tempValidated[dep] = true;
+              }
+            }
+          }
+
           return false; // early exit for this field
         }
       }
 
-      errors[field.name] = null;
-      validatedFields[field.name] = true;
+      tempErrors[name] = null;
+      tempValidated[name] = true;
       return true;
     });
 
     const results = await Promise.all(validations);
+
+    // Update the context state with the results
+    for (const key in tempTouched) {
+      if (!touched[key]) touched[key] = true;
+    }
+
+    for (const key in tempValidated) {
+      validatedFields[key] = true;
+    }
+
+    for (const key in tempErrors) {
+      if (errors[key] !== tempErrors[key]) {
+        errors[key] = tempErrors[key];
+      }
+    }
+
     return results.every(Boolean);
   }
 
@@ -343,6 +417,7 @@ export function useVorm(
     touched,
     dirty,
     initial,
+    fieldOptionsMap,
     validate,
     validateFieldByName,
     getValidationMode,

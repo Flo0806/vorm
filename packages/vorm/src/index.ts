@@ -8,7 +8,6 @@ export * from "./composables/useVormContext.js";
 
 // Core
 export * from "./core/validatorEngine";
-export * from "./core/schemaProcessor";
 
 // Validation rules
 export * from "./validation/matchField";

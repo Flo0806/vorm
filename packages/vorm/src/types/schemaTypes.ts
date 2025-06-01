@@ -10,6 +10,18 @@ export type Option =
       disabled?: boolean;
     };
 
+export type ShowIfCondition =
+  | Record<string, any>
+  | ((formData: Record<string, any>, path: string) => boolean)
+  | {
+      dependsOn: string;
+      condition: (
+        value: any,
+        formData: Record<string, any>,
+        path: string
+      ) => boolean;
+    };
+
 /**
  * Defines the types for a single form field
  */
@@ -31,10 +43,10 @@ export interface VormFieldSchema {
   disabled?: boolean;
   label?: string;
   showError?: boolean;
-  options?: Option[] | ((formData: any) => Option[]);
+  // options?: Option[] | ((formData: any) => Option[]);
   placeholder?: string;
   helpText?: string;
-  showIf?: Record<string, any> | ((formData: Record<string, any>) => boolean);
+  showIf?: ShowIfCondition; // Record<string, any> | ((formData: Record<string, any>) => boolean);
   validation?: ValidationRule[];
   visibility?: (formData: Record<string, any>) => boolean;
   validationMode?: ValidationMode;

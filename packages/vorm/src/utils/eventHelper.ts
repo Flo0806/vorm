@@ -4,7 +4,6 @@ import { setValueByPath } from "./pathHelpers";
 
 export function getValueFromEvent(e: Event, fieldType: string): any {
   const target = e.target as HTMLInputElement | HTMLSelectElement;
-  console.log(fieldType);
   switch (fieldType) {
     case "checkbox":
       if (target instanceof HTMLInputElement) {
