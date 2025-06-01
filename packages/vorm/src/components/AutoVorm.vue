@@ -350,12 +350,12 @@ function renderFieldContent(fieldName: string) {
       "div",
       {},
       slots[fieldName]?.({
-        name: fieldName,
         slotName: fieldName,
         field,
         state: fieldStates.value[fieldName],
         path: fieldName,
         indexes: extractRepeaterIndexes(fieldName),
+        content: () => renderDefaultInput(fieldName),
       })
     );
   }

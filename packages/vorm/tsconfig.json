@@ -4,18 +4,14 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "declaration": true,
-    "declarationDir": "./dist",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-    "paths": {
-      "vorm": ["../vorm/src"],
-      "vorm/components": ["../vorm/src/components"]
-    },
-    "types": ["node", "vite/client"]
+    "composite": true,
+    "types": ["vite/client"]
   },
   "include": ["src"]
 }

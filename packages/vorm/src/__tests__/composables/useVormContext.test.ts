@@ -5,7 +5,7 @@ import type { VormContext } from "../../composables/useVorm";
 import { useVormContext } from "../../composables/useVormContext";
 import { VormContextKey } from "../../core/vormContext";
 
-const mockContext: VormContext = {
+const mockContext: any = {
   schema: [],
   formData: {},
   errors: {},

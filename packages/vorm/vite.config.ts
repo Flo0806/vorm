@@ -1,31 +1,29 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import dts from "vite-plugin-dts";
 import path from "path";
 
 export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      vorm: path.resolve(__dirname, "../vorm/src"),
-      "vorm/components": path.resolve(__dirname, "../vorm/src/components"),
-    },
-  },
-  test: {
-    environment: "jsdom",
-    globals: true,
-    setupFiles: "./test/setup.ts",
-  },
+  plugins: [
+    vue(),
+    dts({
+      entryRoot: "src", // alles ab src/**
+      outDir: "dist", // zusammen mit JS-Build
+      rollupTypes: true, // generiert index.d.ts & components.d.ts
+    }),
+  ],
+
   build: {
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
-      name: "Vorm",
-      fileName: "vorm",
+      entry: {
+        index: path.resolve(__dirname, "src/index.ts"),
+        components: path.resolve(__dirname, "src/components/index.ts"),
+      },
+      formats: ["es"],
+      fileName: (format, entry) => `${entry}.mjs`,
     },
     rollupOptions: {
       external: ["vue"],
-      output: {
-        globals: { vue: "Vue" },
-      },
     },
   },
 });
