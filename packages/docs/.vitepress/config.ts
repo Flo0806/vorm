@@ -9,7 +9,7 @@ export default defineConfig({
     logo: "/vorm-logo-small.png",
     nav: [
       { text: "Start", link: "/" },
-      { text: "Components", link: "/components" },
+      { text: "API", link: "/getting-started/concepts" },
       { text: "GitHub", link: "https://github.com/Flo0806/vorm" },
     ],
     sidebar: [

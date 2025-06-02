@@ -1,9 +1,3 @@
-# Component: AutoVorm
-
-`<AutoVorm>` is the central dynamic rendering component in Vorm. It automatically renders all visible fields based on the schema and current form state. It integrates slot overrides, validation, layouting, `showIf` logic, and wrapper handling.
-
----
-
 # Advanced: Nested Repeaters
 
 Vorm fully supports deeply nested repeater structures. These allow complex form hierarchies like `contacts -> business -> emails` and so on.
@@ -26,6 +20,7 @@ This ensures:
 
 - Only the fields for this repeater item are rendered.
 - Nested repeaters inside are ignored unless explicitly rendered again.
+- use the `default` slot to get the current fullName
 
 To render sub-repeaters:
 
