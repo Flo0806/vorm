@@ -1,45 +1,48 @@
 <script setup lang="ts">
 import { VormProvider, AutoVorm } from "vorm/components";
-import { matchField, useVorm, type VormSchema } from "vorm";
+import { matchField, max, useVorm, type VormSchema } from "vorm";
 import { onMounted, ref } from "vue";
+import VormInput from "../components/VormInput.vue";
 
-const schema = ref<VormSchema>([
+const schema: VormSchema = [
   {
-    name: "firstName",
+    name: "username",
     type: "text",
-    label: "FirstName",
+    label: "Username",
     validation: [{ rule: "required" }],
+  },
+  {
+    name: "gender",
+    type: "select",
+    label: "Gender",
+    options: ["Male", "Female", "Other"],
+  },
+  {
+    name: "subscribe",
+    type: "checkbox",
+    label: "Subscribe",
+  },
+  {
+    name: "bio",
+    type: "textarea",
+    label: "Short Bio",
+    validation: [{ rule: "required" }, { rule: max(50) }],
     classes: {
       input: "my-input",
+      outer: "my-outer",
+      label: "my-label",
       help: "my-help",
-      outer: "form-grid-item-basic ",
     },
   },
   {
-    name: "email",
-    type: "email",
-    label: "Email",
-    validation: [
-      { rule: "required" },
-      { rule: matchField("firstName"), message: "Test test" },
-    ],
-    validationMode: "onBlur",
+    name: "dob",
+    type: "date",
+    label: "Date of Birth",
+    validation: [{ rule: "required" }],
   },
-  {
-    name: "acceptTerms",
-    type: "checkbox",
-    label: "I accept the terms and conditions",
-    validation: [{ rule: "required", message: "You must accept the terms" }],
-  },
-  {
-    name: "startDate",
-    type: "datetime-local",
-    label: "Datum:",
-    validation: [{ rule: "required", message: "You must set a date" }],
-  },
-]);
+];
 
-const { formData, errors, validate } = useVorm(schema.value, { key: "test" }); // { formData, errors, validate }
+const { formData, errors, validate } = useVorm(schema); // { formData, errors, validate }
 
 async function onSubmit() {
   if (await validate()) console.log("Form 1 valid:", formData);
@@ -47,6 +50,7 @@ async function onSubmit() {
 }
 
 function submitEvent(e: SubmitEvent) {
+  onSubmit();
   e.preventDefault();
   console.log("Form submitted");
 }
@@ -82,35 +86,89 @@ onMounted(() => {
   </AutoVorm> -->
 
   <!-- <AutoVorm :schema="schema" :showError="true"> -->
-  <VormProvider context-key="test" v-model="formData">
-    <AutoVorm as="form" @submit="submitEvent" layout="grid" :columns="2">
-      <template #before-email>
-        <div class="text-xs text-blue-700 italic mb-2">
-          Bitte gib deine geschäftliche E-Mail-Adresse an.
-        </div>
-      </template>
 
-      <template #wrapper:[email]="{ field, content, state }">
-        <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
-          <label :for="field.name">Hier: {{ field.label }}</label>
-          <component :is="content()" />
-          <p v-if="state.error" class="text-red-500 text-xs">
-            {{ state.error }}
-          </p>
-        </div>
-      </template>
-      <template #after-email>
-        <button class="form-grid-item-2" @click="onSubmit" type="submit">
-          Absenden
-        </button>
-      </template>
-    </AutoVorm>
-  </VormProvider>
+  <AutoVorm as="form" @submit="submitEvent" containerClass="container-test">
+    <template #wrapper:username="{ field, content, state }">
+      <div class="flex flex-col">
+        <label for="username">Username</label>
+        <component :is="content()" />
+        <span v-if="state.error" class="text-red-500 text-sm">{{
+          state.error
+        }}</span>
+      </div>
+    </template>
+
+    <template #wrapper:gender="{ field, content, state }">
+      <div>
+        <label for="gender">Gender</label>
+        <component :is="content()" />
+      </div>
+    </template>
+
+    <template #wrapper:subscribe="{ field, content, state }">
+      <div>
+        <component :is="content()" />
+        <label for="subscribe">Subscribe to newsletter</label>
+      </div>
+    </template>
+
+    <!-- <template #wrapper:bio="{ field, content, state }">
+      <div>
+        <label for="bio">Short Bio</label>
+        <component :is="content()" />
+      </div>
+    </template> -->
+
+    <template #bio="{ field, state }">
+      <VormInput
+        :name="field.name"
+        v-model="formData[field.name]"
+        :label="field.label"
+        placeholder="Custom Email"
+      />
+    </template>
+
+    <!-- <template #wrapper:dob="{ field, content, state }">
+      <div>
+        <label for="dob">Date of Birth</label>
+        <component :is="content()" />
+      </div>
+    </template> -->
+    <template #after-dob>
+      <button type="submit" class="bg-blue-600 text-white py-2 rounded">
+        Register
+      </button>
+    </template>
+  </AutoVorm>
+
+  <form class="container-test">
+    <div>
+      <input type="text" />
+    </div>
+  </form>
 </template>
 
 <style>
-label {
-  font-weight: bold;
+.my-input {
+  background-color: lightblue;
+  border-radius: 1rem;
+}
+
+.container-test {
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: green;
+  border-radius: 1rem;
+  display: flex;
+
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.container-test * {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
 }
 
 .my-button {
@@ -152,8 +210,8 @@ label {
   border: 1px solid #ddd;
 }
 
-.form-grid-item-basic {
-  grid-column: 1;
+.form-grid-item {
+  grid-column: span 2;
 }
 
 .form-grid-item-2 {

@@ -33,7 +33,7 @@ const schema: VormSchema = reactive([
     validation: [{ rule: "required" }],
     fields: [
       { name: "name", type: "text", label: "Name" },
-      { name: "email", type: "email", label: "E-Mail", inheritWrapper: true },
+      { name: "email", type: "email", label: "E-Mail", inheritWrapper: false },
       {
         name: "phones",
         type: "repeater",
@@ -56,22 +56,22 @@ const schema: VormSchema = reactive([
 
 const { formData, errors, validate } = useVorm(schema); // { formData, errors, validate }
 
-onMounted(() => {
-  setTimeout(() => {
-    formData.contacts[0].phones[1].number = "123456789";
-  }, 5000);
+// onMounted(() => {
+//   setTimeout(() => {
+//     formData.contacts[0].phones[1].number = "123456789";
+//   }, 5000);
 
-  setTimeout(() => {
-    testDisabled.value = false;
-    // console.log("schema", schema[2]);
-    // const modOption = (
-    //   schema[2].fields![2].fields![1].options as Option[]
-    // ).find((opt) => typeof opt === "object" && opt.label === "Moderator");
-    // if (modOption && typeof modOption === "object") {
-    //   modOption.disabled = false;
-    // }
-  }, 3000);
-});
+//   setTimeout(() => {
+//     testDisabled.value = false;
+//     // console.log("schema", schema[2]);
+//     // const modOption = (
+//     //   schema[2].fields![2].fields![1].options as Option[]
+//     // ).find((opt) => typeof opt === "object" && opt.label === "Moderator");
+//     // if (modOption && typeof modOption === "object") {
+//     //   modOption.disabled = false;
+//     // }
+//   }, 3000);
+// });
 
 async function onSubmit() {
   if (await validate()) console.log("Form 1 valid:", formData);
@@ -82,6 +82,8 @@ function submitEvent(e: SubmitEvent) {
   e.preventDefault();
   console.log("Form submitted");
 }
+
+const testSlot = ref<string>("email");
 </script>
 
 <template>
@@ -92,20 +94,44 @@ function submitEvent(e: SubmitEvent) {
         Bitte gib deine geschäftliche E-Mail-Adresse an.
       </p>
     </template>
-    <template #wrapper:email="{ field, content, state }">
+    <template #email="{ field, content, state }">
+      <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
+        <label :for="field.name">zdzzz: {{ field.label }}</label>
+        <input
+          v-model="formData.email"
+          :placeholder="field?.label"
+          :name="field.name"
+          :class="{ 'error-border': state.error }"
+        />
+        <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
+      </div>
+    </template>
+    <template #contacts.email="{ field, content, state }">
+      <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
+        <label :for="field.name">aaa: {{ field.label }}</label>
+        <input
+          v-model="formData.email"
+          :placeholder="field?.label"
+          :name="field.name"
+          :class="{ 'error-border': state.error }"
+        />
+        <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
+      </div>
+    </template>
+    <!-- <template #wrapper:email="{ field, content, state }">
       <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
         <label :for="field.name">Hier: {{ field.label }}</label>
         <component :is="content()" />
         <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
       </div>
-    </template>
-    <template #wrapper:[contacts.email]="{ field, content, state }">
+    </template> -->
+    <!-- <template #wrapper:[contacts.email]="{ field, content, state }">
       <div class="p-4 border rounded form-grid-item-2" :class="state.classes">
         <label :for="field.name">Hier teswt: {{ field.label }}</label>
         <component :is="content()" />
         <p v-if="state.error" class="text-red-500 text-xs">{{ state.error }}</p>
       </div>
-    </template>
+    </template> -->
     <template #after-email>
       <button class="form-grid-item-2" @click="onSubmit" type="submit">
         Absenden

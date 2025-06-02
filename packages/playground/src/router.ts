@@ -9,8 +9,20 @@ import AutoVormBigDemo from "./demos/AutoVormBigDemo.vue";
 import AutoVormShowIfDemo from "./demos/AutoVormShowIfDemo.vue";
 
 import AutoVormRepeaterDemo from "./demos/AutoVormRepeaterDemo.vue";
+import PlaygroundBasics from "./demos/PlaygroundBasics.vue";
+import PlaygroundExtended from "./demos/PlaygroundExtended.vue";
 
 const routes = [
+  {
+    path: "/playground-basics",
+    component: PlaygroundBasics,
+    name: "PlaygroundBasics",
+  },
+  {
+    path: "/playground-extended",
+    component: PlaygroundExtended,
+    name: "PlaygroundExtended",
+  },
   { path: "/basics", component: BasicDemo, name: "Basic" },
   {
     path: "/registration",

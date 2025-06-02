@@ -38,6 +38,7 @@ const registrationSchema: VormSchema = [
     name: "emailConfirm",
     type: "email",
     label: "Confirm Email",
+    validationMode: "onBlur",
     validation: [
       { rule: "required", message: "Please confirm your email" },
       { rule: matchField("email"), affects: ["email"] },
