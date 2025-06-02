@@ -1,15 +1,19 @@
 {
-  "name": "vorm",
-  "version": "1.0.0-alpha.1",
+  "name": "vorm-vue",
+  "version": "1.0.0-alpha.5",
   "type": "module",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "style": "./dist/vorm-vue.css"
     },
     "./components": {
       "import": "./dist/components.mjs",
       "types": "./dist/components.d.ts"
+    },
+    "./vorm-vue.css": {
+      "default": "./dist/vorm-vue.css"
     }
   },
   "types": "./dist/index.d.ts",
@@ -45,6 +49,6 @@
     "vue-tsc": "^2.2.10"
   },
   "dependencies": {
-    "vorm": "file:"
+    "vorm-vue": "file:"
   }
 }

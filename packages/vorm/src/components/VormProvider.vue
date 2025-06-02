@@ -3,39 +3,34 @@ import { ref, onMounted, inject, provide, type InjectionKey } from "vue";
 import type { VormContext } from "../composables/useVorm";
 import { VormContextKey, VormActiveContextKey } from "../core/vormContext";
 
+// Props: Optional contextKey to allow multiple Vorm instances
 const props = defineProps<{
   contextKey?: symbol | string;
-  modelValue: Record<string, any>;
 }>();
 
+// Resolve the effective key (default to VormContextKey)
 const key = props.contextKey || VormContextKey;
 
+// Track registered AutoVorms (used for conflict warnings)
 const registeredVorms = ref<{ as?: string | undefined }[]>([]);
 
+// Method for AutoVorms to register themselves
 function registerVorm(meta: { as?: string }) {
   registeredVorms.value.push(meta);
 }
-
 provide("registerVorm", registerVorm);
 
-// Get context from parent
+// Try to get the Vorm context from parent (must exist!)
 const context = inject<VormContext>(key as InjectionKey<VormContext>);
 if (!context) {
-  throw new Error(`[Vorm] No context provided for key: ${String(key)}`);
+  throw new Error(`[VormProvider] No context found for key: ${String(key)}`);
 }
 
-// Sync modelValue with context formData
-Object.keys(props.modelValue).forEach((fieldKey) => {
-  context.formData[fieldKey] = props.modelValue[fieldKey];
-});
-
-// Provide the context to child components
+// Provide the Vorm context to all children
 provide(key as InjectionKey<VormContext>, context);
+provide(VormActiveContextKey, key); // Save active context key (for VormInput, etc.)
 
-// New get the current key
-provide(VormActiveContextKey, key);
-
-// Reference to the wrapper element
+// Used to bind validation triggers
 const wrapperRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
@@ -57,7 +52,7 @@ onMounted(() => {
     }
   });
 
-  // Check for multiple forms in the same VormProvider
+  // Warn if multiple top-level <form> elements are used
   const forms = registeredVorms.value.filter((v) => v.as === "form");
   if (forms.length > 0 && registeredVorms.value.length > 1) {
     console.warn(

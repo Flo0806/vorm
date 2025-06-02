@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 import dts from "vite-plugin-dts";
 import path from "path";
@@ -12,7 +12,11 @@ export default defineConfig({
       rollupTypes: true, // generiert index.d.ts & components.d.ts
     }),
   ],
-
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./test/setup.ts",
+  },
   build: {
     lib: {
       entry: {
@@ -25,5 +29,6 @@ export default defineConfig({
     rollupOptions: {
       external: ["vue"],
     },
+    cssCodeSplit: false,
   },
 });

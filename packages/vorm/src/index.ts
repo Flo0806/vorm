@@ -1,3 +1,5 @@
+import "./styles/global.css"; // optional automatisch
+
 // Export tyles
 export * from "./types/schemaTypes";
 export * from "./types/validatorTypes";
