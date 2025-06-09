@@ -11,6 +11,7 @@ import AutoVormShowIfDemo from "./demos/AutoVormShowIfDemo.vue";
 import AutoVormRepeaterDemo from "./demos/AutoVormRepeaterDemo.vue";
 import PlaygroundBasics from "./demos/PlaygroundBasics.vue";
 import PlaygroundExtended from "./demos/PlaygroundExtended.vue";
+import PlaygroundRealWorld from "./demos/PlaygroundRealWorld.vue";
 
 const routes = [
   {
@@ -22,6 +23,11 @@ const routes = [
     path: "/playground-extended",
     component: PlaygroundExtended,
     name: "PlaygroundExtended",
+  },
+  {
+    path: "/playground-realworld",
+    component: PlaygroundRealWorld,
+    name: "PlaygroundRealWorld",
   },
   { path: "/basics", component: BasicDemo, name: "Basic" },
   {

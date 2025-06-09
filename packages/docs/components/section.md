@@ -44,6 +44,17 @@ It integrates well into any Vorm form structure, including inside `<AutoVorm>` o
 }
 ```
 
+> ⚠️ **Note:** Don't forget to include `vorm` styles in your `main.js`
+
+```ts
+import { createApp } from "vue";
+import "./style.css";
+import App from "./App.vue";
+import "vorm-vue/vorm-vue.css"; // The important line
+
+createApp(App).mount("#app");
+```
+
 These styles can be overridden via `classes` and `titleClasses` props or through global styling.
 
 ## Flexibility

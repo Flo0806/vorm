@@ -254,6 +254,12 @@ vorm.validate();
 
 ---
 
+- [Custom Inputs](../advanced/custom-inputs.md)
+- [Field Slots](../advanced/slots.md)
+- [Validation Rules](../core/validation.md)
+
+---
+
 ## Summary
 
 Vorm gives you full control while staying declarative and elegant. Customize deeply — or go fast with defaults. Your form, your rules.

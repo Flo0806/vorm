@@ -46,6 +46,19 @@ import {
 } from "vorm/components";
 ```
 
+## Standard Styles
+
+Vorm has some standard styles for `vorm-group` or the `VormSection` component. To use this styles you must import it :
+
+```ts
+import { createApp } from "vue";
+import "./style.css";
+import App from "./App.vue";
+import "vorm-vue/vorm-vue.css"; // The important line
+
+createApp(App).mount("#app");
+```
+
 ## Optional: Tailwind CSS
 
 Vorm comes unstyled — ready to adapt to your design system. We recommend Tailwind CSS for rapid styling:

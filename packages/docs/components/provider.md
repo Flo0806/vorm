@@ -54,6 +54,15 @@ const { formData, validate } = useVorm(schema1, { key: contextKey1 });
 </VormProvider>
 ```
 
+`VormProvider` allows you to build fully custom forms without relying on `AutoVorm`:
+
+```vue
+<VormProvider :contextKey="contextKey1" v-model="formData">
+  <input v-model="formData.firstName" placeholder="First Name" />
+  <VormInput name="email" placeholder="Email" />
+</VormProvider>
+```
+
 ---
 
 ## Notes
@@ -62,6 +71,13 @@ const { formData, validate } = useVorm(schema1, { key: contextKey1 });
 - You can nest providers to isolate parts of your form or switch schemas in-place.
 - Every `VormProvider` registers itself via injection and re-provides the context.
 - `AutoVorm` itself don't need `VormProvider` for working. Only for multiple schema using you should use `VormProvider` around `AutoVorm`.
+
+---
+
+- [AutoVorm](./autovorm.md)
+- [VormRepeater](./repeater.md)
+- [VormSection](./section.md)
+- [Custom Inputs (useVormContext)](../advanced/custom-inputs)
 
 ---
 
