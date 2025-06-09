@@ -21,6 +21,7 @@
   --vp-button-alt-hover-text: #ffffff;
 
   --vp-button-alt-active-bg: #3b7f5a;
+  /* --vp-layout-max-width: 1240px; */
 }
 
 .VPHomeHero .name {
@@ -44,4 +45,9 @@
 .VPButton.alt {
   border-color: #5daa83;
   color: #5daa83;
+}
+
+/* Erhöhe die Breite der Content-Box minimal */
+.VPDoc .content {
+  min-width: 800px;
 }

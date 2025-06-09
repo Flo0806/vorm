@@ -149,4 +149,8 @@ const error = computed(() => {
 
 ---
 
+- [Custom Inputs](../advanced/custom-inputs)
+
+---
+
 > VormRepeater is essential for handling dynamic, nested arrays of form data. It offers full control and plays nicely with both AutoVorm and manual rendering.

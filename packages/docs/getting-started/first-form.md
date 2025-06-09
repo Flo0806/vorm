@@ -66,6 +66,6 @@ Vorm automatically renders fields based on the schema, tracks their state (touch
 
 Want more control? Read next:
 
-- [Custom Inputs](./custom-inputs.md)
-- [Field Slots](./slots.md)
-- [Validation Rules](./validation.md)
+- [Custom Inputs](../advanced/custom-inputs.md)
+- [Field Slots](../advanced/slots.md)
+- [Validation Rules](../core/validation.md)
