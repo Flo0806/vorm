@@ -2,6 +2,7 @@
   "name": "vorm-vue",
   "version": "1.0.0-alpha.5",
   "type": "module",
+  "license": "MIT",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
