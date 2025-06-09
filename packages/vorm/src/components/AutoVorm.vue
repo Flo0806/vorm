@@ -25,7 +25,7 @@ const register = inject<(meta: { as?: string }) => void>(
 );
 
 const props = defineProps<{
-  layout?: "grid";
+  layout?: "grid" | "stacked" | unknown;
   columns?: number;
   fieldWrapperClass?: string;
   only?: string[];
@@ -56,7 +56,10 @@ const defaultGridClass = computed(() => {
   if (props.layout === "grid") {
     return `vorm-grid vorm-grid-cols-${props.columns || 1}`;
   }
-  return "vorm-container";
+  if (props.layout === "stacked") {
+    return "vorm-stacked";
+  }
+  return "vorm-container"; // fallback
 });
 
 /**
@@ -337,6 +340,16 @@ function renderDefaultInput(fieldName: string) {
     );
   }
 
+  if (config.type === "checkbox") {
+    return h("input", {
+      ...inputProps,
+      checked: !!value, // checked instead value
+      value: undefined, // Remove value for checkbox
+      onChange: (e: any) =>
+        updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
+    });
+  }
+
   return h(config.type === "textarea" ? "textarea" : "input", inputProps);
 }
 
@@ -538,35 +551,3 @@ onMounted(() => {
     </template>
   </component>
 </template>
-
-<style scoped>
-.vorm-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.vorm-grid-cols-1 {
-  grid-template-columns: repeat(1, 1fr);
-}
-.vorm-grid-cols-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-.vorm-grid-cols-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.vorm-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.vorm-col-span-1 {
-  grid-column: span 1 / span 1;
-}
-.vorm-col-span-2 {
-  grid-column: span 2 / span 2;
-}
-.vorm-col-span-3 {
-  grid-column: span 3 / span 3;
-}
-</style>
