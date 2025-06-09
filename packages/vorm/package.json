@@ -3,6 +3,14 @@
   "version": "1.0.0-alpha.5",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/Flo0806/vorm#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Flo0806/vorm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Flo0806/vorm/issues"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
