@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  docs:
+    build: .
+    container_name: vitepress-docs
+    ports:
+      - "5173:80"
+    restart: unless-stopped

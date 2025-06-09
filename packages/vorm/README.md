@@ -97,7 +97,7 @@ function submit() {
 
 Full documentation (including advanced examples, slot usage, nested repeaters, and async validation):
 
-👉 [https://vorm.dev](https://vorm.dev) _(link placeholder)_
+👉 [https://vorm.fh-softdev.de](https://vorm.fh-softdev.de)
 
 ---
 
