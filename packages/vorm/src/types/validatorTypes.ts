@@ -1,3 +1,5 @@
+import type { FieldValueType, FieldValueTypeMap } from "./schemaTypes.js";
+
 /**
  * Default validation rules
  */
@@ -11,24 +13,24 @@ export type BuiltInRuleName =
 /**
  * Defines a single validation rule
  */
-export type SyncValidatorFn = (
-  value: any,
+export type SyncValidatorFn<T extends keyof FieldValueTypeMap> = (
+  value: FieldValueType<T>,
   formData: Record<string, any>
 ) => ValidationResult | string | null;
 
 /**
  * Defines a single async validation rule
  */
-export type AsyncValidatorFn = (
-  value: any,
+export type AsyncValidatorFn<T extends keyof FieldValueTypeMap> = (
+  value: FieldValueType<T>,
   formData: Record<string, any>
 ) => Promise<ValidationResult | string | null>;
 
 /**
  * Represents a validation rule in the `VormFieldSchema`
  */
-export interface ValidationRule {
-  rule: BuiltInRuleName | SyncValidatorFn | AsyncValidatorFn;
+export interface ValidationRule<T extends keyof FieldValueTypeMap> {
+  rule: BuiltInRuleName | SyncValidatorFn<T> | AsyncValidatorFn<T>;
   message?: string;
   affects?: string[];
 }
