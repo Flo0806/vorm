@@ -4,7 +4,7 @@ stages:
 
 variables:
   IMAGE_NAME: "$CI_REGISTRY_IMAGE"
-  IMAGE_TAG: "dev"
+  IMAGE_TAG: "main"
 
 # --- Build Stage ---
 build_vitepress_image:
@@ -13,7 +13,7 @@ build_vitepress_image:
   services:
     - docker:24.0.7-dind
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
   script:
     - echo "🔑 Login zur GitLab-Registry..."
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
@@ -27,7 +27,7 @@ deploy_vitepress_to_server:
   stage: deploy
   image: alpine:latest
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       needs: [build_vitepress_image]
   before_script:
     - "which ssh-agent || (apk add --update openssh-client)"
