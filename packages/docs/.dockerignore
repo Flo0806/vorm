@@ -1,0 +1,18 @@
+# Ignoriere alle node_modules-Ordner, egal wo sie sind
+**/node_modules
+
+# Ignoriere Log-Dateien
+npm-debug.log*
+pnpm-debug.log*
+
+# Ignoriere lokale Build-Ergebnisse
+**/dist
+**/.vitepress/dist
+**/.vitepress/cache
+
+# Ignoriere System-Dateien
+.DS_Store
+
+# Ignoriere lokale Umgebungs-Variablen
+.env
+.env.local
