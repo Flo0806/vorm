@@ -42,12 +42,8 @@ deploy_vitepress_to_server:
     - |
       ssh $SERVER_USER@$SERVER_IP "
         set -e 
-
-        echo '--- DEBUG-START ---'
-        echo 'Registry: $CI_REGISTRY'
-        echo 'Deploy User: $CI_DEPLOY_USER'
-        echo 'Passwort-Länge: ${#CI_DEPLOY_PASSWORD}'
-        echo '--- DEBUG-ENDE ---'
+        
+        cd /opt/webapps/vorm-docs/
 
         echo '🔑 Login zur GitLab-Registry auf dem Server...';
         docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
