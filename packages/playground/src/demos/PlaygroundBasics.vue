@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { AutoVorm, VormProvider, VormSection } from "vorm/components";
-import { useVorm, type VormSchema } from "vorm";
+import { AutoVorm, VormSection } from "vorm/components";
+import { createField, useVorm, type VormSchema } from "vorm";
 import { onMounted } from "vue";
 
 const schema: VormSchema = [
@@ -45,6 +45,19 @@ const schema: VormSchema = [
     type: "checkbox",
     validation: [{ rule: "required" }],
   },
+  createField({
+    name: "upload",
+    type: "file",
+    label: "Upload your CV",
+    validation: [
+      {
+        rule: (value) => {
+          // ✅ value: File | null
+          return value && value.size < 5_000_000 ? null : "Max 5MB allowed";
+        },
+      },
+    ],
+  }),
 ];
 
 const { formData, validate, resetForm, updateField } = useVorm(schema, {

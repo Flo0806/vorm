@@ -1,0 +1,57 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  IMAGE_NAME: "$CI_REGISTRY_IMAGE"
+  IMAGE_TAG: "dev"
+
+# --- Build Stage ---
+build_vitepress_image:
+  stage: build
+  image: docker:24.0.7
+  services:
+    - docker:24.0.7-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+  script:
+    - echo "🔑 Login zur GitLab-Registry..."
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - echo "🏗️ Baue VitePress Docker Image..."
+    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" -f docs/Dockerfile docs/
+    - echo "⬆️ Pushe Image zur Registry..."
+    - docker push "$IMAGE_NAME:$IMAGE_TAG"
+
+# --- Deploy Stage ---
+deploy_vitepress_to_server:
+  stage: deploy
+  image: alpine:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      needs: [build_vitepress_image]
+  before_script:
+    - "which ssh-agent || (apk add --update openssh-client)"
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SERVER_IP >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - echo "🚀 Deploye VitePress auf den Server..."
+    - |
+      ssh $SERVER_USER@$SERVER_IP "
+        cd /opt/webapps/vorm-docs &&
+        
+        echo '🔑 Login zur GitLab-Registry auf dem Server...';
+        docker login $CI_REGISTRY -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD;
+
+        echo '⬇️ Ziehe neues Image via docker-compose...';
+        docker-compose pull;
+        
+        echo '🔄 Starte Container neu...';
+        docker-compose up -d;
+        
+        echo '🧹 Aufräumen...';
+        docker image prune -f;
+      "
