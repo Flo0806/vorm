@@ -43,10 +43,13 @@ deploy_vitepress_to_server:
       ssh $SERVER_USER@$SERVER_IP "
         set -e 
 
+        echo '--- DEBUG-START ---'
+        echo 'Registry: $CI_REGISTRY'
+        echo 'Deploy User: $CI_DEPLOY_USER'
+        echo 'Passwort-Länge: ${#CI_DEPLOY_PASSWORD}'
+        echo '--- DEBUG-ENDE ---'
+
         echo '🔑 Login zur GitLab-Registry auf dem Server...';
-        #
-        # HIER DIE KORREKTUR: Doppelte Anführungszeichen verwenden!
-        #
         echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
 
         echo '⬇️ Ziehe neues Image via docker-compose...';
