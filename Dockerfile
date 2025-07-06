@@ -4,10 +4,12 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Kopiere die Abhängigkeits-Definitionen
-COPY package.json pnpm-lock.yaml ./
+# HIER DIE KORREKTUR: Wir kopieren auch die pnpm-workspace.yaml
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
 
-# HIER DIE KORREKTUR: Wir entfernen '--prod', um auch devDependencies zu installieren
+# Wenn es keine pnpm-workspace.yaml gibt, schlägt der Befehl nicht fehl
+# dank des Sternchens (*), aber wenn sie da ist, wird sie kopiert.
+
 RUN pnpm install --frozen-lockfile
 
 # Kopiere den gesamten Quellcode
