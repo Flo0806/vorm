@@ -18,7 +18,7 @@ build_vitepress_image:
     - echo "🔑 Login zur GitLab-Registry..."
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - echo "🏗️ Baue VitePress Docker Image..."
-    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" -f docs/Dockerfile docs/
+    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" -f packages/docs/Dockerfile packages/docs/
     - echo "⬆️ Pushe Image zur Registry..."
     - docker push "$IMAGE_NAME:$IMAGE_TAG"
 
