@@ -16,7 +16,8 @@ build_vitepress_image:
     - if: '$CI_COMMIT_BRANCH == "main"'
   script:
     - echo "🔑 Login zur GitLab-Registry..."
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+    # - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - echo "🏗️ Baue VitePress Docker Image..."
     - docker build -t "$IMAGE_NAME:$IMAGE_TAG" -f packages/docs/Dockerfile packages/docs/
     - echo "⬆️ Pushe Image zur Registry..."
