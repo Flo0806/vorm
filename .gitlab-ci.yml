@@ -41,9 +41,12 @@ deploy_vitepress_to_server:
     - echo "🚀 Deploye VitePress auf den Server..."
     - |
       ssh $SERVER_USER@$SERVER_IP "
-        cd /opt/webapps/vorm-docs &&
-        
+        set -e 
+
         echo '🔑 Login zur GitLab-Registry auf dem Server...';
+        #
+        # HIER DIE KORREKTUR: Doppelte Anführungszeichen verwenden!
+        #
         echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
 
         echo '⬇️ Ziehe neues Image via docker-compose...';
