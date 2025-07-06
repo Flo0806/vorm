@@ -29,7 +29,7 @@ WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 
 # Kopiere nur die gebauten Dateien aus dem 'docs'-Projekt
-COPY --from=builder /app/packages/docs/.vitepress/dist .
+COPY --from=builder /packages/docs/.vitepress/dist .
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
