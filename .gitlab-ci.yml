@@ -50,7 +50,7 @@ deploy_vitepress_to_server:
         echo '--- DEBUG-ENDE ---'
 
         echo '🔑 Login zur GitLab-Registry auf dem Server...';
-        echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
 
         echo '⬇️ Ziehe neues Image via docker-compose...';
         docker-compose pull;
