@@ -25,8 +25,10 @@ create_new_version_tag:
     - git config --global user.name "GitLab CI"
     - git remote set-url origin "https://gitlab-ci-token:${CI_PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
-    - |
-      set -e # Bricht das Skript bei Fehlern sofort ab
+    - | # Startet den mehrzeiligen Block
+      # Alle diese Zeilen sind jetzt EINE Stufe weiter eingerückt
+      # und gehören damit zum selben Skript-Block.
+      set -e
 
       echo "Letzten Tag abrufen..."
       git fetch --tags
