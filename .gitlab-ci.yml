@@ -6,79 +6,62 @@ stages:
 variables:
   VERSION_BUMP:
     value: "patch"
-    options:
-      - "patch"
-      - "minor"
-      - "major"
-    description: "Type of version increase for the release."
+    options: ["patch", "minor", "major"]
+    description: "Art der Versionserhöhung für das Release."
 
-# Workflow-Regeln: Definiert, wann welche Pipelines laufen
 workflow:
   rules:
-    # 1. Erlaube die manuelle Release-Pipeline mit der VERSION_BUMP Variable
     - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
-      when: always
-    # 2. Erlaube die automatische Build-Pipeline für neue Tags
     - if: $CI_COMMIT_TAG
-      when: always
-    # 3. Verhindere alle anderen Pipeline-Starts (z.B. bei normalen Commits auf main)
-    - when: never
 
-# --- Stufe 1: Neue Version erstellen (nur in der manuellen Pipeline) ---
+# --- Stufe 1: Neue Version erstellen ---
 create_new_version_tag:
   stage: versioning
-  image: alpine/git:latest # Ein leichtes Image mit Git
+  image: alpine/git:latest
   rules:
-    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP # Läuft nur bei manuellem Start
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
   before_script:
-    # Git mit dem Deploy Token konfigurieren, um zurück pushen zu können
     - git config --global user.email "gitlab-ci@example.com"
     - git config --global user.name "GitLab CI"
     - git remote set-url origin "https://gitlab-ci-token:${CI_PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
-    - echo "Letzten Tag abrufen..."
-    - git fetch --tags
-    - LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` || echo "v0.0.0")
-    - echo "Letzter Tag ist $LATEST_TAG"
-
-    # Versionsteile extrahieren (z.B. aus v1.2.3)
-    - IFS='.' read -ra V <<< "${LATEST_TAG#v}"
-    - MAJOR=${V[0]:-0}
-    - MINOR=${V[1]:-0}
-    - PATCH=${V[2]:-0}
-
-    # Neue Version basierend auf der Eingabe berechnen
     - |
+      set -e
+
+      echo "Letzten Tag abrufen..."
+      git fetch --tags
+      LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` || echo "v0.0.0")
+      echo "Letzter Tag ist $LATEST_TAG"
+
+      IFS='.' read -ra V <<< "${LATEST_TAG#v}"
+      MAJOR=${V[0]:-0}
+      MINOR=${V[1]:-0}
+      PATCH=${V[2]:-0}
+
       case $VERSION_BUMP in
         major)
-          MAJOR=$((MAJOR+1))
-          MINOR=0
-          PATCH=0
-          ;;
+          MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0;;
         minor)
-          MINOR=$((MINOR+1))
-          PATCH=0
-          ;;
+          MINOR=$((MINOR+1)); PATCH=0;;
         patch)
-          PATCH=$((PATCH+1))
-          ;;
+          PATCH=$((PATCH+1));;
       esac
-    - NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-    - echo "Neue Version ist $NEW_VERSION"
 
-    # Neuen Git-Tag erstellen und pushen
-    - git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
-    - git push origin "$NEW_VERSION"
-    - echo "Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
+      NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+      echo "Neue Version ist $NEW_VERSION"
 
-# --- Stufe 2 & 3: Bauen und Deployen (nur in der Tag-Pipeline) ---
+      git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+      git push origin "$NEW_VERSION"
+      echo "Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
+
+# --- Stufe 2 & 3: Bauen und Deployen ---
 build_image:
   stage: build
   image: docker:24.0.7
   services:
     - docker:24.0.7-dind
   rules:
-    - if: $CI_COMMIT_TAG # Läuft nur, wenn ein Tag existiert
+    - if: $CI_COMMIT_TAG
   script:
     - IMAGE_TAGGED_WITH_VERSION="$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
@@ -90,18 +73,25 @@ deploy_to_server:
   image: alpine:latest
   needs: [build_image]
   rules:
-    - if: $CI_COMMIT_TAG # Läuft nur, wenn ein Tag existiert
+    - if: $CI_COMMIT_TAG
   script:
-    # Wichtig: Wir deployen immer den "latest" Tag, der im Build-Schritt aktualisiert wurde
-    # Alternativ könntest du auch den $CI_COMMIT_TAG hier verwenden
     - |
       ssh $SERVER_USER@$SERVER_IP "
-        set -e
+        set -e 
+        
         cd /opt/webapps/vorm-docs/
-        echo 'IMAGE_NAME_WITH_TAG=$CI_REGISTRY_IMAGE:latest' > .env
-        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-        docker compose pull
-        docker compose down
-        docker compose up -d
-        docker image prune -f
+
+        echo '🔑 Login at GitLab-Registry on the server...'
+        # Dies ist die korrekte, nicht-interaktive Methode
+        echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+
+        echo '⬇️ Get new image from registry...';
+        docker compose pull;
+        
+        echo '🔄 Restart container...';
+        docker compose down;
+        docker compose up -d;
+        
+        echo '🧹 Clean up...';
+        docker image prune -f;
       "
