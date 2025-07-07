@@ -21,7 +21,9 @@ workflow:
 # --- Stage 1: Create new version tag (only on manual trigger) ---
 create_new_version_tag:
   stage: versioning
-  image: alpine/git:latest
+  image:
+    namne: alpine/git:latest
+    entrypoint: [""]
   rules:
     - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
   before_script:
