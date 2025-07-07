@@ -1,10 +1,9 @@
 stages:
+  - versioning
   - build
   - deploy
 
 variables:
-  IMAGE_NAME: "$CI_REGISTRY_IMAGE"
-  IMAGE_TAG: "main"
   VERSION_BUMP:
     value: "patch"
     options:
@@ -13,54 +12,96 @@ variables:
       - "major"
     description: "Type of version increase for the release."
 
-# --- Build Stage ---
-build_vitepress_image:
+# Workflow-Regeln: Definiert, wann welche Pipelines laufen
+workflow:
+  rules:
+    # 1. Erlaube die manuelle Release-Pipeline mit der VERSION_BUMP Variable
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
+      when: always
+    # 2. Erlaube die automatische Build-Pipeline für neue Tags
+    - if: $CI_COMMIT_TAG
+      when: always
+    # 3. Verhindere alle anderen Pipeline-Starts (z.B. bei normalen Commits auf main)
+    - when: never
+
+# --- Stufe 1: Neue Version erstellen (nur in der manuellen Pipeline) ---
+create_new_version_tag:
+  stage: versioning
+  image: alpine/git:latest # Ein leichtes Image mit Git
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP # Läuft nur bei manuellem Start
+  before_script:
+    # Git mit dem Deploy Token konfigurieren, um zurück pushen zu können
+    - git config --global user.email "gitlab-ci@example.com"
+    - git config --global user.name "GitLab CI"
+    - git remote set-url origin "https://gitlab-ci-token:${CI_PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+  script:
+    - echo "Letzten Tag abrufen..."
+    - git fetch --tags
+    - LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` || echo "v0.0.0")
+    - echo "Letzter Tag ist $LATEST_TAG"
+
+    # Versionsteile extrahieren (z.B. aus v1.2.3)
+    - IFS='.' read -ra V <<< "${LATEST_TAG#v}"
+    - MAJOR=${V[0]:-0}
+    - MINOR=${V[1]:-0}
+    - PATCH=${V[2]:-0}
+
+    # Neue Version basierend auf der Eingabe berechnen
+    - |
+      case $VERSION_BUMP in
+        major)
+          MAJOR=$((MAJOR+1))
+          MINOR=0
+          PATCH=0
+          ;;
+        minor)
+          MINOR=$((MINOR+1))
+          PATCH=0
+          ;;
+        patch)
+          PATCH=$((PATCH+1))
+          ;;
+      esac
+    - NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+    - echo "Neue Version ist $NEW_VERSION"
+
+    # Neuen Git-Tag erstellen und pushen
+    - git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+    - git push origin "$NEW_VERSION"
+    - echo "Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
+
+# --- Stufe 2 & 3: Bauen und Deployen (nur in der Tag-Pipeline) ---
+build_image:
   stage: build
   image: docker:24.0.7
   services:
     - docker:24.0.7-dind
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: $CI_COMMIT_TAG # Läuft nur, wenn ein Tag existiert
   script:
-    - echo "🔑 Login zur GitLab-Registry..."
+    - IMAGE_TAGGED_WITH_VERSION="$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - echo "🏗️ Baue VitePress Docker Image..."
-    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" -f packages/docs/Dockerfile packages/docs/
-    - echo "⬆️ Pushe Image zur Registry..."
-    - docker push "$IMAGE_NAME:$IMAGE_TAG"
+    - docker build -t "$IMAGE_TAGGED_WITH_VERSION" -t "$CI_REGISTRY_IMAGE:latest" packages/docs/
+    - docker push --all-tags "$CI_REGISTRY_IMAGE"
 
-# --- Deploy Stage ---
-deploy_vitepress_to_server:
+deploy_to_server:
   stage: deploy
   image: alpine:latest
+  needs: [build_image]
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      needs: [build_vitepress_image]
-  before_script:
-    - "which ssh-agent || (apk add --update openssh-client)"
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan $SERVER_IP >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
+    - if: $CI_COMMIT_TAG # Läuft nur, wenn ein Tag existiert
   script:
-    - echo "🚀 Deploye VitePress auf den Server..."
+    # Wichtig: Wir deployen immer den "latest" Tag, der im Build-Schritt aktualisiert wurde
+    # Alternativ könntest du auch den $CI_COMMIT_TAG hier verwenden
     - |
       ssh $SERVER_USER@$SERVER_IP "
-        set -e 
-        
+        set -e
         cd /opt/webapps/vorm-docs/
-
-        echo '🔑 Login zur GitLab-Registry auf dem Server...';
+        echo 'IMAGE_NAME_WITH_TAG=$CI_REGISTRY_IMAGE:latest' > .env
         docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-
-        echo '⬇️ Ziehe neues Image via docker compose...';
-        docker compose pull;
-        
-        echo '🔄 Starte Container neu...';
-        docker compose up -d;
-        
-        echo '🧹 Aufräumen...';
-        docker image prune -f;
+        docker compose pull
+        docker compose down
+        docker compose up -d
+        docker image prune -f
       "
