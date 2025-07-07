@@ -42,10 +42,11 @@ create_new_version_tag:
         echo "✅ Letzter Tag ist $LATEST_TAG"
       fi
 
-      IFS='.' read -ra V <<< "${LATEST_TAG#v}"
-      MAJOR=${V[0]:-0}
-      MINOR=${V[1]:-0}
-      PATCH=${V[2]:-0}
+      VERSION="${LATEST_TAG#v}"
+      set -- $(echo "$VERSION" | tr '.' ' ')
+      MAJOR=${1:-0}
+      MINOR=${2:-0}
+      PATCH=${3:-0}
 
       case "$VERSION_BUMP" in
         major)
