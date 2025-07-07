@@ -113,7 +113,7 @@ deploy_to_server:
         set -e
         cd /opt/webapps/vorm-docs/
         echo "IMAGE_NAME_WITH_TAG=$CI_REGISTRY_IMAGE:latest" > .env
-        echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin
+        docker login $CI_REGISTRY -u gitlab-ci-token -p $CI_JOB_TOKEN;
         docker compose pull
         docker compose down
         docker compose up -d
