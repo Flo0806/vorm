@@ -21,6 +21,8 @@ workflow:
 # --- Stage 1: Create new version tag (only on manual trigger) ---
 create_new_version_tag:
   stage: versioning
+  variables:
+    GIT_STRATEGY: clone
   image:
     name: alpine/git:latest
     entrypoint: [""]
