@@ -29,7 +29,7 @@ create_new_version_tag:
   before_script:
     - git config --global user.email "gitlab-ci@example.com"
     - git config --global user.name "GitLab CI"
-    - git remote set-url origin "https://DEIN-TOKEN-NAME:${CI_PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git remote set-url origin "https://CI_PROJECT_ACCESS_TOKEN:${CI_PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
     - |
       set -e
