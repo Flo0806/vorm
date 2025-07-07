@@ -7,82 +7,89 @@ variables:
   VERSION_BUMP:
     value: "patch"
     options: ["patch", "minor", "major"]
-    description: "Art der Versionserhöhung für das Release."
+    description: "Type of version bump for the release."
 
 workflow:
   rules:
+    # Rule 1: Allow manual pipeline for versioned releases
     - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
-    - if: $CI_COMMIT_TAG
+    # Rule 2: Allow automatic pipeline for semantic version tags (e.g. v1.2.3)
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+    # Rule 3: Allow automatic pipeline for our "latest" trigger tag
+    - if: $CI_COMMIT_TAG == "deploy-to-latest"
 
-# --- Stufe 1: Neue Version erstellen ---
+# --- Stage 1: Create new version tag (only on manual trigger) ---
 create_new_version_tag:
   stage: versioning
-  image:
-    name: alpine/git:latest
-    entrypoint: [""]
+  image: alpine/git:latest
   rules:
     - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
   before_script:
-    - git config --global user.email "gitlab-ci@example.com"
+    - git config --global user.email "ci@flogersoft.de"
     - git config --global user.name "GitLab CI"
-    - git remote set-url origin "https://test:${test}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git remote set-url origin "https://CI_PROJECT_ACCESS_TOKEN:${CI_PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
     - |
       set -e
 
-      echo "📦 Letzten Tag abrufen..."
+      echo "Fetching latest tag..."
       git fetch --tags
+      LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` || echo "v0.0.0")
+      echo "Latest tag is $LATEST_TAG"
 
-      TAGS=$(git tag)
-      if [ -z "$TAGS" ]; then
-        LATEST_TAG="v0.0.0"
-        echo "⚠️  Keine Tags gefunden. Fallback: $LATEST_TAG"
-      else
-        LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-        echo "✅ Letzter Tag ist $LATEST_TAG"
-      fi
+      IFS='.' read -ra V <<< "${LATEST_TAG#v}"
+      MAJOR=${V[0]:-0}
+      MINOR=${V[1]:-0}
+      PATCH=${V[2]:-0}
 
-      VERSION="${LATEST_TAG#v}"
-      set -- $(echo "$VERSION" | tr '.' ' ')
-      MAJOR=${1:-0}
-      MINOR=${2:-0}
-      PATCH=${3:-0}
-
-      case "$VERSION_BUMP" in
+      case $VERSION_BUMP in
         major)
-          MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0;;
+          MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0;;
         minor)
-          MINOR=$((MINOR + 1)); PATCH=0;;
-        patch|*)
-          PATCH=$((PATCH + 1));;
+          MINOR=$((MINOR+1)); PATCH=0;;
+        patch)
+          PATCH=$((PATCH+1));;
       esac
 
       NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-      echo "🚀 Neue Version ist $NEW_VERSION"
+      echo "New version is $NEW_VERSION"
 
       git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
       git push origin "$NEW_VERSION"
-      echo "🏷️  Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
+      echo "New tag $NEW_VERSION was successfully created and pushed."
 
-# --- Stufe 2 & 3: Bauen und Deployen ---
+# --- Stage 2: Build Docker image (triggered by tags) ---
 build_image:
   stage: build
   image: docker:24.0.7
   services:
     - docker:24.0.7-dind
   rules:
+    # This job runs for BOTH tag types
     - if: $CI_COMMIT_TAG
   script:
-    - IMAGE_TAGGED_WITH_VERSION="$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build -t "$IMAGE_TAGGED_WITH_VERSION" -t "$CI_REGISTRY_IMAGE:latest" packages/docs/
-    - docker push --all-tags "$CI_REGISTRY_IMAGE"
+    - |
+      set -e
+      # Logic: Distinguish what to build based on the tag
+      if [ "$CI_COMMIT_TAG" == "deploy-to-latest" ]; then
+        echo "🏗️ Building only ':latest' image..."
+        docker build -t "$CI_REGISTRY_IMAGE:latest" packages/docs/
+        docker push "$CI_REGISTRY_IMAGE:latest"
+      else
+        echo "🏗️ Building versioned image ($CI_COMMIT_TAG) and ':latest'..."
+        IMAGE_TAGGED_WITH_VERSION="$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker build -t "$IMAGE_TAGGED_WITH_VERSION" -t "$CI_REGISTRY_IMAGE:latest" packages/docs/
+        docker push --all-tags "$CI_REGISTRY_IMAGE"
+      fi
 
+# --- Stage 3: Deploy to server (triggered by tags) ---
 deploy_to_server:
   stage: deploy
   image: alpine:latest
   needs: [build_image]
   rules:
+    # This job runs for BOTH tag types
     - if: $CI_COMMIT_TAG
   before_script:
     - "which ssh-agent || (apk add --update openssh-client)"
@@ -93,23 +100,15 @@ deploy_to_server:
     - ssh-keyscan $SERVER_IP >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
+    # This script always deploys the ":latest" version
     - |
       ssh $SERVER_USER@$SERVER_IP "
-        set -e 
-        
+        set -e
         cd /opt/webapps/vorm-docs/
-
-        echo '🔑 Login at GitLab-Registry on the server...'
-        # Dies ist die korrekte, nicht-interaktive Methode
-        echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
-
-        echo '⬇️ Get new image from registry...';
-        docker compose pull;
-        
-        echo '🔄 Restart container...';
-        docker compose down;
-        docker compose up -d;
-        
-        echo '🧹 Clean up...';
-        docker image prune -f;
+        echo "IMAGE_NAME_WITH_TAG=$CI_REGISTRY_IMAGE:latest" > .env
+        echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin
+        docker compose pull
+        docker compose down
+        docker compose up -d
+        docker image prune -f
       "
