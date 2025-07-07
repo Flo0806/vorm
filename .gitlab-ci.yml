@@ -5,6 +5,13 @@ stages:
 variables:
   IMAGE_NAME: "$CI_REGISTRY_IMAGE"
   IMAGE_TAG: "main"
+  VERSION_BUMP:
+    value: "patch"
+    options:
+      - "patch"
+      - "minor"
+      - "major"
+    description: "Type of version increase for the release."
 
 # --- Build Stage ---
 build_vitepress_image:
