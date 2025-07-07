@@ -30,31 +30,38 @@ create_new_version_tag:
     - |
       set -e
 
-      echo "Letzten Tag abrufen..."
+      echo "📦 Letzten Tag abrufen..."
       git fetch --tags
-      LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` || echo "v0.0.0")
-      echo "Letzter Tag ist $LATEST_TAG"
+
+      TAGS=$(git tag)
+      if [ -z "$TAGS" ]; then
+        LATEST_TAG="v0.0.0"
+        echo "⚠️  Keine Tags gefunden. Fallback: $LATEST_TAG"
+      else
+        LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+        echo "✅ Letzter Tag ist $LATEST_TAG"
+      fi
 
       IFS='.' read -ra V <<< "${LATEST_TAG#v}"
       MAJOR=${V[0]:-0}
       MINOR=${V[1]:-0}
       PATCH=${V[2]:-0}
 
-      case $VERSION_BUMP in
+      case "$VERSION_BUMP" in
         major)
-          MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0;;
+          MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0;;
         minor)
-          MINOR=$((MINOR+1)); PATCH=0;;
-        patch)
-          PATCH=$((PATCH+1));;
+          MINOR=$((MINOR + 1)); PATCH=0;;
+        patch|*)
+          PATCH=$((PATCH + 1));;
       esac
 
       NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-      echo "Neue Version ist $NEW_VERSION"
+      echo "🚀 Neue Version ist $NEW_VERSION"
 
       git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
       git push origin "$NEW_VERSION"
-      echo "Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
+      echo "🏷️  Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
 
 # --- Stufe 2 & 3: Bauen und Deployen ---
 build_image:
