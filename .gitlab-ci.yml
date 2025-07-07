@@ -22,7 +22,7 @@ workflow:
 create_new_version_tag:
   stage: versioning
   image:
-    namne: alpine/git:latest
+    name: alpine/git:latest
     entrypoint: [""]
   rules:
     - if: $CI_PIPELINE_SOURCE == "web" && $VERSION_BUMP
