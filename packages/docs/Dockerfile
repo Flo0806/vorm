@@ -1,5 +1,8 @@
 # Stage 1: Build the static assets
-FROM node:22.5.0-bookworm-slim AS builder
+FROM node:24.3.0-bookworm-slim AS builder
+
+RUN apt-get update && apt-get upgrade -y
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -8,9 +11,9 @@ RUN npm install
 COPY . .
 RUN npm run docs:build
 
-# --- DEBUG-SCHRITT HINZUGEFÜGT ---
-# Zeige uns den Inhalt des Build-Ordners, um zu sehen, ob Dateien erstellt wurden.
-# Das "R" bei -laR sorgt für eine rekursive Auflistung.
+# --- DEBUG STEP ADDED ---
+# Show the contents of the build folder to verify if files were created.
+# The "R" in -laR enables recursive listing.
 RUN ls -laR /app/.vitepress/
 
 
@@ -18,7 +21,7 @@ RUN ls -laR /app/.vitepress/
 FROM nginx:stable-alpine
 WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
-# Dieser Pfad muss mit dem übereinstimmen, was der ls-Befehl anzeigt
+# This path must match what the ls command above shows
 COPY --from=builder /app/.vitepress/dist .
 
 EXPOSE 80
