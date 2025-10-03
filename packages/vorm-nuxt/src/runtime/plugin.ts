@@ -1,7 +1,7 @@
 import { defineNuxtPlugin } from 'nuxt/app'
 
-export default defineNuxtPlugin(nuxtApp => {
-  if (process.dev) {
+export default defineNuxtPlugin(() => {
+  if (import.meta.dev) {
     console.log('🎨 Vorm is ready!')
   }
 
