@@ -1,7 +1,7 @@
 {
   "name": "vorm-nuxt",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "My new Nuxt module",
   "license": "MIT",
   "repository": "Flo0806/vorm",
