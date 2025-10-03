@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      vorm-root:
-        specifier: 'file:'
-        version: 'file:'
     devDependencies:
       '@changesets/changelog-github':
         specifier: ^0.5.1
@@ -26,10 +22,6 @@ importers:
         version: 3.4.18(yaml@2.8.1)
 
   packages/docs:
-    dependencies:
-      docs:
-        specifier: 'file:'
-        version: 'link:'
     devDependencies:
       vitepress:
         specifier: ^1.6.3
@@ -79,10 +71,6 @@ importers:
         version: 2.2.12(typescript@5.8.3)
 
   packages/vorm:
-    dependencies:
-      vorm-vue:
-        specifier: 'file:'
-        version: 'link:'
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.6.3
@@ -6154,9 +6142,6 @@ packages:
         optional: true
       jsdom:
         optional: true
-
-  'vorm-root@file:':
-    resolution: {directory: '', type: directory}
 
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
@@ -13198,8 +13183,6 @@ snapshots:
       - terser
       - tsx
       - yaml
-
-  'vorm-root@file:': {}
 
   vscode-uri@3.1.0: {}
 
