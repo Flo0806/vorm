@@ -40,12 +40,7 @@ describe("expandSchema", () => {
     const result = expandSchema(schema, formData);
 
     expect(result).toHaveLength(4);
-    expect(result.map((f) => f.name)).toEqual([
-      "contacts[0].email",
-      "contacts[0].phone",
-      "contacts[1].email",
-      "contacts[1].phone",
-    ]);
+    expect(result.map((f) => f.name)).toEqual(["contacts[0].email", "contacts[0].phone", "contacts[1].email", "contacts[1].phone"]);
   });
 
   it("supports nested repeaters", () => {
@@ -72,10 +67,7 @@ describe("expandSchema", () => {
     };
 
     const result = expandSchema(schema, formData);
-    expect(result.map((f) => f.name)).toEqual([
-      "contacts[0].emails[0].address",
-      "contacts[0].emails[1].address",
-    ]);
+    expect(result.map((f) => f.name)).toEqual(["contacts[0].emails[0].address", "contacts[0].emails[1].address"]);
   });
 
   it("defensively skips invalid repeater content", () => {
@@ -88,7 +80,7 @@ describe("expandSchema", () => {
     ];
 
     const formData = {
-      items: "not-an-array", // ⛔ invalid, aber nur theoretisch
+      items: "not-an-array", // ⛔ invalid, but only theoretically
     };
 
     const result = expandSchema(schema, formData);

@@ -7,9 +7,9 @@ export default defineConfig({
   plugins: [
     vue(),
     dts({
-      entryRoot: "src", // alles ab src/**
-      outDir: "dist", // zusammen mit JS-Build
-      rollupTypes: true, // generiert index.d.ts & components.d.ts
+      entryRoot: "src", // everything from src/**
+      outDir: "dist", // together with JS build
+      rollupTypes: true, // generates index.d.ts & components.d.ts
     }),
   ],
   test: {
