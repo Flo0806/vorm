@@ -1,0 +1,43 @@
+name: Release (Changesets)
+
+on:
+  push:
+    branches: [main] # runs on merges to main
+  workflow_dispatch: # optional: trigger manually
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required for PR/Tags/Commits in the repo
+      pull-requests: write # required for creating/updating the collective PR
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Changesets reads commit history
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Create or Update Release PR (no publish)
+        uses: changesets/action@v1
+        with:
+          # NO publish: we only want the collective PR + changelogs
+          # createGithubReleases only works after a publish, so irrelevant here
+          # (we explicitly set it to false to avoid noise)
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
