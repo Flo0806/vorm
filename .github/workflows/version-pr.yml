@@ -1,0 +1,44 @@
+# .github/workflows/version-pr.yml
+
+name: Version PR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  version:
+    name: Create Version PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Necessary to be able to create the PR
+          fetch-depth: 0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8 # or your preferred pnpm version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create Changeset PR or update existing one
+        uses: changesets/action@v1
+        with:
+          # This command runs 'changeset version' and pushes the changes
+          version: pnpm changeset version
+          # Title of the Pull Request
+          title: "Upcoming Release"
+        env:
+          # The token is necessary for creating/updating the PR
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
