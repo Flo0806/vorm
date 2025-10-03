@@ -1,10 +1,10 @@
 {
-  "name": "my-module",
+  "name": "vorm-nuxt",
   "type": "module",
   "version": "1.0.0",
   "description": "My new Nuxt module",
   "license": "MIT",
-  "repository": "your-org/my-module",
+  "repository": "Flo0806/vorm",
   "exports": {
     ".": {
       "types": "./dist/types.d.mts",
