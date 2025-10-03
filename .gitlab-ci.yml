@@ -21,8 +21,6 @@ workflow:
 # --- Stage 1: Create new version tag (only on manual trigger) ---
 create_new_version_tag:
   stage: versioning
-  variables:
-    GIT_STRATEGY: clone
   image:
     name: alpine/git:latest
     entrypoint: [""]
@@ -36,20 +34,20 @@ create_new_version_tag:
     - |
       set -e
 
-      echo "Fetching latest tag..."
+      echo "Letzten Tag abrufen..."
       git fetch --tags
       LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` || echo "v0.0.0")
-      echo "Latest tag is $LATEST_TAG"
+      echo "Letzter Tag ist $LATEST_TAG"
 
-      # --- CORRECTION HERE ---
-      # We split the version in a way that works with any shell.
+      # --- HIER DIE KORREKTUR ---
+      # Wir teilen die Version auf eine Weise, die mit jeder Shell funktioniert.
       VERSION_NO_V="${LATEST_TAG#v}"
       IFS='.'
       set -- $VERSION_NO_V
       MAJOR=${1:-0}
       MINOR=${2:-0}
       PATCH=${3:-0}
-      # --- END OF CORRECTION ---
+      # --- ENDE DER KORREKTUR ---
 
       case $VERSION_BUMP in
         major)
@@ -61,11 +59,11 @@ create_new_version_tag:
       esac
 
       NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-      echo "New version is $NEW_VERSION"
+      echo "Neue Version ist $NEW_VERSION"
 
       git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
       git push origin "$NEW_VERSION"
-      echo "New tag $NEW_VERSION was successfully created and pushed."
+      echo "Neuer Tag $NEW_VERSION wurde erfolgreich erstellt und gepusht."
 
 # --- Stage 2: Build Docker image (triggered by tags) ---
 build_image:
