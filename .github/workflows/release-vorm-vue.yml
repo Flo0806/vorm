@@ -1,0 +1,37 @@
+name: Release vorm-vue
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish vorm-vue package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build vorm-vue package
+        run: pnpm --filter vorm-vue build
+
+      - name: Publish vorm-vue to npm
+        working-directory: packages/vorm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --access public --no-git-checks
