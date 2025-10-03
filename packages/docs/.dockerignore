@@ -1,0 +1,18 @@
+# Ignore all node_modules folders, wherever they are
+**/node_modules
+
+# Ignore log files
+npm-debug.log*
+pnpm-debug.log*
+
+# Ignore local build results
+**/dist
+**/.vitepress/dist
+**/.vitepress/cache
+
+# Ignore system files
+.DS_Store
+
+# Ignore local environment variables
+.env
+.env.local

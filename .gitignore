@@ -19,3 +19,11 @@ coverage
 
 # VitePress
 packages/docs/**/cache
+
+#npm
+package-lock.json
+
+#env
+.env
+.env.local
+.env.*.local

@@ -47,7 +47,7 @@
   color: #5daa83;
 }
 
-/* Erhöhe die Breite der Content-Box minimal */
+/* Slightly increase the width of the content box */
 .VPDoc .content {
   min-width: 800px;
 }
