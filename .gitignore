@@ -27,3 +27,6 @@ package-lock.json
 .env
 .env.local
 .env.*.local
+
+#act secrets
+.secrets

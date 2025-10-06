@@ -4,6 +4,7 @@
   "type": "module",
   "license": "MIT",
   "private": false,
+  "packageManager": "pnpm@10.11.0",
   "publishConfig": {
     "access": "public"
   },

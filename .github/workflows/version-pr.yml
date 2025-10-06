@@ -1,27 +1,30 @@
 # .github/workflows/version-pr.yml
-
 name: Version PR
 
 on:
   push:
     branches:
       - main
+    paths:
+      - ".changeset/**"
 
 jobs:
   version:
     name: Create Version PR
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Necessary to be able to create the PR
           fetch-depth: 0
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
-          version: 8 # or your preferred pnpm version
+          version: 10.11.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,12 +36,50 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Create Changeset PR or update existing one
+        id: changesets
         uses: changesets/action@v1
         with:
-          # This command runs 'changeset version' and pushes the changes
           version: pnpm changeset version
-          # Title of the Pull Request
-          title: "Upcoming Release"
+          title: "Release: Version Updates"
         env:
-          # The token is necessary for creating/updating the PR
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update PR title with package versions
+        if: steps.changesets.outputs.pullRequestNumber != ''
+        run: |
+          PR_NUMBER=${{ steps.changesets.outputs.pullRequestNumber }}
+
+          # Collect all packages with new versions
+          PACKAGES=""
+
+          # vorm-vue
+          if [ -f "packages/vorm/package.json" ]; then
+            VORM_VERSION=$(node -p "require('./packages/vorm/package.json').version")
+            PACKAGES="${PACKAGES}vorm-vue@${VORM_VERSION} "
+          fi
+
+          # vorm-nuxt (later)
+          if [ -f "packages/vorm-nuxt/package.json" ]; then
+            NUXT_VERSION=$(node -p "require('./packages/vorm-nuxt/package.json').version")
+            PACKAGES="${PACKAGES}vorm-nuxt@${NUXT_VERSION} "
+          fi
+
+          # Create the title
+          if [ -n "$PACKAGES" ]; then
+            TITLE="Release: $PACKAGES"
+          else
+            TITLE="Release: Version Updates"
+          fi
+
+          # Update the PR
+          gh pr edit $PR_NUMBER \
+            --title "$TITLE" \
+            --body "This PR was automatically generated and contains version updates.
+
+          ## Packages to be released
+
+          $PACKAGES
+
+          See the CHANGELOGs for details."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

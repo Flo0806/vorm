@@ -1,59 +1,98 @@
+# .github/workflows/release-vorm-vue.yml
 name: Release vorm-vue
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/vorm/package.json"
+      - "packages/vorm/CHANGELOG.md"
 
 jobs:
-  publish:
-    name: Publish vorm-vue package
+  release:
+    name: Publish vorm-vue to npm
     runs-on: ubuntu-latest
+
     permissions:
-      contents: read
+      contents: write # For creating GitHub Releases
+      id-token: write # For npm provenance
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Check if changesets still exist
+      - name: Check for changesets
+        id: check_changesets
+        run: |
+          if ls .changeset/*.md 2>/dev/null | grep -v "README" | grep -q .; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Changesets found - this is not a release merge"
+          else
+            echo "has_changesets=false" >> $GITHUB_OUTPUT
+            echo "✅ No changesets found - proceeding with release"
+          fi
 
       - name: Setup PNPM
+        if: steps.check_changesets.outputs.has_changesets == 'false'
         uses: pnpm/action-setup@v4
         with:
           version: 10.11.0
 
       - name: Setup Node.js
+        if: steps.check_changesets.outputs.has_changesets == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org
-          cache: "pnpm" # uses pnpm-lock.yaml as cache key
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
 
-      # Optional: Cache pnpm store for faster installs
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-v2
-
-      - name: Sanity check (Versions & specifiers)
-        run: |
-          pnpm -v && node -v
-          echo "--- grep vorm-root ---"
-          grep -n "vorm-root" pnpm-lock.yaml || true
-
-      - name: Install dependencies (frozen)
+      - name: Install dependencies
+        if: steps.check_changesets.outputs.has_changesets == 'false'
         run: pnpm install --frozen-lockfile
 
-      - name: Build vorm-vue package
+      - name: Build vorm-vue
+        if: steps.check_changesets.outputs.has_changesets == 'false'
         run: pnpm --filter vorm-vue build
 
-      # Check if the package can be published
-      - name: npm publish (dry-run)
-        working-directory: packages/vorm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --access public --no-git-checks --dry-run
+      - name: Extract version
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        id: version
+        run: |
+          VERSION=$(node -p "require('./packages/vorm/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Releasing vorm-vue v$VERSION"
 
+      # Dry-run test (comment out after successful test)
+      # - name: Test npm publish (dry-run)
+      #   if: steps.check_changesets.outputs.has_changesets == 'false'
+      #   working-directory: packages/vorm
+      #   run: |
+      #     echo "🧪 Dry-run mode - would publish vorm-vue@${{ steps.version.outputs.version }}"
+      #     pnpm publish --dry-run --no-git-checks
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Publish only vorm-vue (not docs, playground, vorm-nuxt)
       - name: Publish vorm-vue to npm
-        if: ${{ success() }}
+        if: steps.check_changesets.outputs.has_changesets == 'false'
         working-directory: packages/vorm
+        run: |
+          echo "Publishing vorm-vue@${{ steps.version.outputs.version }}"
+          pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --access public --no-git-checks
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Create GitHub Release
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        run: |
+          gh release create "vorm-vue@${{ steps.version.outputs.version }}" \
+            --title "vorm-vue v${{ steps.version.outputs.version }}" \
+            --notes-file packages/vorm/CHANGELOG.md \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
