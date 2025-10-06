@@ -1,5 +1,5 @@
 ---
-"vorm-vue": major
+"vorm-vue": patch
 ---
 
 updated readme
