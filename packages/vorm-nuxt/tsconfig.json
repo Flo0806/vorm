@@ -1,8 +1,7 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
@@ -13,8 +12,9 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*", "playground/**/*"],
-  "exclude": ["node_modules", "dist", "playground"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "playground", ".nuxt"]
 }
