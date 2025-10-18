@@ -12,6 +12,7 @@ import AutoVormRepeaterDemo from "./demos/AutoVormRepeaterDemo.vue";
 import PlaygroundBasics from "./demos/PlaygroundBasics.vue";
 import PlaygroundExtended from "./demos/PlaygroundExtended.vue";
 import PlaygroundRealWorld from "./demos/PlaygroundRealWorld.vue";
+import MinMaxTestDemo from "./demos/MinMaxTestDemo.vue";
 
 const routes = [
   {
@@ -74,6 +75,11 @@ const routes = [
     path: "/autovorm-repeater",
     component: AutoVormRepeaterDemo,
     name: "AutoVormRepeaterDemo",
+  },
+  {
+    path: "/minmax-test",
+    component: MinMaxTestDemo,
+    name: "MinMaxTest",
   },
 ];
 

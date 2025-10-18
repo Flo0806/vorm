@@ -153,8 +153,11 @@ export function useVorm(
     for (const key of Object.keys(newData)) {
       setValueByPath(formData, key, newData[key]);
       setValueByPath(initial, key, newData[key]);
+    }
 
-      if (options?.fieldOptions?.[key]) {
+    // Set fieldOptions separately (even if newData is empty)
+    if (options?.fieldOptions) {
+      for (const key of Object.keys(options.fieldOptions)) {
         fieldOptionsMap.set(key, options.fieldOptions[key]);
       }
     }
