@@ -37,7 +37,7 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
     }
 
     if (options.components) {
-      // Register each component explicitly
+      // Register all vorm-vue components
       addComponent({
         name: 'VormProvider',
         export: 'VormProvider',
@@ -56,7 +56,11 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
         filePath: 'vorm-vue/components'
       })
 
-      // Add more components...
+      addComponent({
+        name: 'VormRepeater',
+        export: 'VormRepeater',
+        filePath: 'vorm-vue/components'
+      })
     }
 
     console.log('✅ Vorm Nuxt Module loaded')

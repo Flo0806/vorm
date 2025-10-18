@@ -1,15 +1,11 @@
 # vorm-nuxt
 
-## 1.0.2
+## 1.0.0
 
-### Patch Changes
+### Major Changes
 
-- Updated dependencies [[`3163598`](https://github.com/Flo0806/vorm/commit/31635984bdb61c74686c840f288c0c075a65afe0)]:
-  - vorm-vue@1.0.1
-
-## 1.0.1
-
-### Patch Changes
-
-- Updated dependencies []:
-  - vorm-vue@1.0.0
+- Initial release of vorm-nuxt
+- Auto-imports for `useVorm` and `useVormContext` composables
+- Auto-registration of all vorm-vue components (VormProvider, AutoVorm, VormSection, VormRepeater)
+- TypeScript support with auto-imported types
+- Configurable module options for auto-imports and components
