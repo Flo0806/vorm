@@ -34,10 +34,13 @@
     "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
   },
   "dependencies": {
-    "@nuxt/kit": "^4.1.2",
-    "vorm-vue": "workspace:*"
+    "@nuxt/kit": "^4.1.2"
+  },
+  "peerDependencies": {
+    "vorm-vue": "^1.0.0"
   },
   "devDependencies": {
+    "vorm-vue": "workspace:*",
     "@antfu/eslint-config": "^5.4.1",
     "@eslint/js": "^9.38.0",
     "@nuxt/devtools": "^2.6.5",

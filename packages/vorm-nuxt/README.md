@@ -23,16 +23,18 @@ vorm-nuxt provides seamless integration of the powerful vorm form library into y
 
 ## Quick Setup
 
-Install the module to your Nuxt application:
-
-```bash
-npx nuxi module add vorm-nuxt
-```
-
-Or manually:
+Install the module and its peer dependency to your Nuxt application:
 
 ```bash
 pnpm add vorm-nuxt vorm-vue
+```
+
+> **Note:** Both packages are required. `vorm-nuxt` is the Nuxt module wrapper, while `vorm-vue` contains the core form library.
+
+Alternatively, use the Nuxt CLI (this will prompt you to install vorm-vue):
+
+```bash
+npx nuxi module add vorm-nuxt
 ```
 
 Then add it to your `nuxt.config.ts`:
