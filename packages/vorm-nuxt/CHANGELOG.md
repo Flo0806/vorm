@@ -1,5 +1,16 @@
 # vorm-nuxt
 
+## 1.0.1
+
+### Patch Changes
+
+- [`003c2f0`](https://github.com/Flo0806/vorm/commit/003c2f0b4d0a83c5216c346f502b1e2535610011) Thanks [@Flo0806](https://github.com/Flo0806)! - Move vorm-vue to peerDependencies for better dependency management
+  - vorm-vue is now a peerDependency instead of a direct dependency
+  - Users must install both packages explicitly: `pnpm add vorm-nuxt vorm-vue`
+  - Follows Nuxt module best practices
+  - Allows users to control vorm-vue version independently
+  - Updated README with clearer installation instructions
+
 ## 1.0.0
 
 ### Major Changes
