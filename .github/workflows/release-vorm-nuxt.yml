@@ -1,0 +1,121 @@
+# .github/workflows/release-vorm-nuxt.yml
+name: Release vorm-nuxt
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/vorm-nuxt/package.json"
+      - "packages/vorm-nuxt/CHANGELOG.md"
+
+jobs:
+  check:
+    name: Check if this is a release
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for changesets
+        id: check
+        run: |
+          if ls .changeset/*.md 2>/dev/null | grep -v "README" | grep -q .; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Changesets found - skipping release"
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "✅ No changesets - this is a release merge"
+          fi
+
+  release:
+    name: Publish vorm-nuxt to npm
+    runs-on: ubuntu-latest
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Check if changesets still exist
+      - name: Check for changesets
+        id: check_changesets
+        run: |
+          if ls .changeset/*.md 2>/dev/null | grep -v "README" | grep -q .; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Changesets found - this is not a release merge"
+          else
+            echo "has_changesets=false" >> $GITHUB_OUTPUT
+            echo "✅ No changesets found - proceeding with release"
+          fi
+
+      - name: Setup PNPM
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Setup Node.js
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build vorm-nuxt
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        run: pnpm --filter vorm-nuxt run prepack
+
+      - name: Extract version
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        id: version
+        run: |
+          VERSION=$(node -p "require('./packages/vorm-nuxt/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Releasing vorm-nuxt v$VERSION"
+
+      # Dry-run test
+      - name: Test npm publish (dry-run)
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        working-directory: packages/vorm-nuxt
+        run: |
+          echo "🧪 Dry-run mode - would publish vorm-nuxt@${{ steps.version.outputs.version }}"
+          pnpm publish --dry-run --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # TODO: Uncomment and activate after successful test
+      - name: Publish vorm-nuxt to npm
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        working-directory: packages/vorm-nuxt
+        run: |
+          echo "Publishing vorm-nuxt@${{ steps.version.outputs.version }}"
+          pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Provenance only in GitHub Actions (not locally with Act)
+          NPM_CONFIG_PROVENANCE: ${{ github.actor != 'nektos/act' }}
+
+      - name: Create GitHub Release
+        if: steps.check_changesets.outputs.has_changesets == 'false'
+        run: |
+          gh release create "vorm-nuxt@${{ steps.version.outputs.version }}" \
+            --title "vorm-nuxt v${{ steps.version.outputs.version }}" \
+            --notes-file packages/vorm-nuxt/CHANGELOG.md \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

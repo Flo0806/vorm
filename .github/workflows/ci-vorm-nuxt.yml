@@ -1,0 +1,70 @@
+# .github/workflows/ci-vorm-nuxt.yml
+name: CI vorm-nuxt
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/vorm-nuxt/**"
+      - ".github/workflows/ci-vorm-nuxt.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/vorm-nuxt/**"
+      - ".github/workflows/ci-vorm-nuxt.yml"
+
+jobs:
+  lint:
+    name: Lint vorm-nuxt
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint vorm-nuxt
+        run: pnpm --filter vorm-nuxt lint
+
+  test:
+    name: Test vorm-nuxt
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare vorm-nuxt
+        run: pnpm --filter vorm-nuxt run dev:prepare
+
+      - name: Test vorm-nuxt
+        run: pnpm --filter vorm-nuxt test

@@ -2,7 +2,7 @@
 
 **The intuitive form engine for Vue 3 — dynamic, schema-driven, fully validated.**
 
-**Soon as a Nuxt module available, too**
+**Also available as [Nuxt module](https://npmjs.com/package/vorm-nuxt) for seamless Nuxt integration**
 
 ![npm](https://img.shields.io/npm/v/vorm-vue)
 ![License](https://img.shields.io/github/license/flo0806/vorm?cacheBust=1)

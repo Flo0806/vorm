@@ -1,8 +1,8 @@
 {
   "name": "vorm-nuxt",
   "type": "module",
-  "version": "1.0.1",
-  "description": "My new Nuxt module",
+  "version": "0.0.0",
+  "description": "Nuxt module for vorm - A Vue.js form library with automatic validation",
   "license": "MIT",
   "repository": "Flo0806/vorm",
   "exports": {
@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "@nuxt/kit": "^4.1.2",
-    "vitest": "^3.2.4",
     "vorm-vue": "workspace:*"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
+    "@eslint/js": "^9.38.0",
     "@nuxt/devtools": "^2.6.5",
     "@nuxt/module-builder": "^1.0.2",
     "@nuxt/schema": "^4.1.2",
@@ -50,6 +50,8 @@
     "eslint-plugin-format": "^1.0.2",
     "nuxt": "^4.1.2",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.46.1",
+    "vitest": "^3.2.4",
     "vue-tsc": "^3.1.0"
   }
 }

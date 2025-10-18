@@ -1,81 +1,196 @@
-<!--
-Get your module up and running quickly.
-
-Find and replace all on all files (CMD+SHIFT+F):
-- Name: My Module
-- Package name: my-module
-- Description: My new Nuxt module
--->
-
-# My Module
+# vorm-nuxt
 
 [![npm version][npm-version-src]][npm-version-href]
 [![npm downloads][npm-downloads-src]][npm-downloads-href]
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-My new Nuxt module for doing amazing things.
+**Nuxt module for [vorm](https://github.com/Flo0806/vorm) - The intuitive form engine for Vue 3**
 
-- [✨ &nbsp;Release Notes](/CHANGELOG.md)
-  <!-- - [🏀 Online playground](https://stackblitz.com/github/your-org/my-module?file=playground%2Fapp.vue) -->
-  <!-- - [📖 &nbsp;Documentation](https://example.com) -->
+vorm-nuxt provides seamless integration of the powerful vorm form library into your Nuxt 3+ application with automatic imports and component registration.
+
+- [✨ Release Notes](/CHANGELOG.md)
+- [📖 vorm Documentation](https://vorm.fh-softdev.de)
 
 ## Features
 
-<!-- Highlight some of the features your module provide here -->
-
-- ⛰ &nbsp;Foo
-- 🚠 &nbsp;Bar
-- 🌲 &nbsp;Baz
+- 🚀 **Auto-imports** - Composables and types available without imports
+- 🎨 **Component registration** - All vorm components globally available
+- ⚡ **Zero configuration** - Works out of the box
+- 🔧 **Configurable** - Disable auto-imports or components if needed
+- 💪 **TypeScript** - Full type safety with auto-imported types
+- ✅ **SSR ready** - Works seamlessly with Nuxt's SSR
 
 ## Quick Setup
 
-Install the module to your Nuxt application with one command:
+Install the module to your Nuxt application:
 
 ```bash
-npx nuxi module add my-module
+npx nuxi module add vorm-nuxt
 ```
 
-That's it! You can now use My Module in your Nuxt app ✨
+Or manually:
 
-## Contribution
+```bash
+pnpm add vorm-nuxt vorm-vue
+```
 
-<details>
-  <summary>Local development</summary>
+Then add it to your `nuxt.config.ts`:
+
+```ts
+export default defineNuxtConfig({
+  modules: ['vorm-nuxt']
+})
+```
+
+That's it! You can now use vorm in your Nuxt app ✨
+
+## Usage
+
+Thanks to auto-imports, you can use vorm without any imports:
+
+```vue
+<script setup lang="ts">
+// No imports needed! useVorm and VormSchema are auto-imported
+const schema: VormSchema = [
+  {
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    validation: [{ rule: 'required' }, { rule: 'email' }]
+  },
+  {
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    validation: [{ rule: 'required' }, { rule: 'min', value: 8 }]
+  }
+]
+
+const { formData, validate } = useVorm(schema)
+
+function handleSubmit() {
+  if (validate()) {
+    console.log('Form data:', formData)
+  }
+}
+</script>
+
+<template>
+  <!-- Components are globally registered -->
+  <VormProvider>
+    <VormSection title="Login">
+      <AutoVorm />
+    </VormSection>
+
+    <button @click="handleSubmit">Submit</button>
+  </VormProvider>
+</template>
+```
+
+## Available Auto-Imports
+
+### Composables
+- `useVorm` - Main composable for form management
+- `useVormContext` - Access form context from child components
+
+### Types
+- `VormSchema` - Type definition for your form schema
+
+## Available Components
+
+All vorm components are automatically registered:
+
+- `<VormProvider>` - Form context provider
+- `<AutoVorm>` - Automatic form generation from schema
+- `<VormSection>` - Group form fields with a title
+- `<VormRepeater>` - Repeatable field groups
+
+## Configuration
+
+You can customize the module in your `nuxt.config.ts`:
+
+```ts
+export default defineNuxtConfig({
+  modules: ['vorm-nuxt'],
+
+  vorm: {
+    // Disable auto-imports (default: true)
+    autoImports: false,
+
+    // Disable component registration (default: true)
+    components: false
+  }
+})
+```
+
+## Module Options
+
+### `autoImports`
+
+- Type: `boolean`
+- Default: `true`
+
+Enable/disable auto-imports for composables and types.
+
+### `components`
+
+- Type: `boolean`
+- Default: `true`
+
+Enable/disable automatic component registration.
+
+## Documentation
+
+For comprehensive documentation about vorm features, validation, slots, and advanced usage:
+
+👉 **[vorm Documentation](https://vorm.fh-softdev.de)**
+
+## Examples
+
+Check out these live examples to see vorm in action:
+
+- [Basic Example](https://stackblitz.com/edit/vitejs-vite-vexqxvur)
+- [Dynamic Layouts](https://stackblitz.com/edit/vitejs-vite-fj6nyh4z)
+- [Real World Example](https://stackblitz.com/edit/vitejs-vite-pdfe4po5)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Development
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Generate type stubs
-npm run dev:prepare
+pnpm run dev:prepare
 
 # Develop with the playground
-npm run dev
+pnpm run dev
 
 # Build the playground
-npm run dev:build
+pnpm run dev:build
 
 # Run ESLint
-npm run lint
+pnpm run lint
 
-# Run Vitest
-npm run test
-npm run test:watch
-
-# Release new version
-npm run release
+# Run tests
+pnpm run test
 ```
 
-</details>
+## License
+
+MIT © [FH SoftDev - Flo0806](https://github.com/flo0806)
 
 <!-- Badges -->
 
-[npm-version-src]: https://img.shields.io/npm/v/my-module/latest.svg?style=flat&colorA=020420&colorB=00DC82
-[npm-version-href]: https://npmjs.com/package/my-module
-[npm-downloads-src]: https://img.shields.io/npm/dm/my-module.svg?style=flat&colorA=020420&colorB=00DC82
-[npm-downloads-href]: https://npm.chart.dev/my-module
-[license-src]: https://img.shields.io/npm/l/my-module.svg?style=flat&colorA=020420&colorB=00DC82
-[license-href]: https://npmjs.com/package/my-module
+[npm-version-src]: https://img.shields.io/npm/v/vorm-nuxt/latest.svg?style=flat&colorA=020420&colorB=00DC82
+[npm-version-href]: https://npmjs.com/package/vorm-nuxt
+[npm-downloads-src]: https://img.shields.io/npm/dm/vorm-nuxt.svg?style=flat&colorA=020420&colorB=00DC82
+[npm-downloads-href]: https://npm.chart.dev/vorm-nuxt
+[license-src]: https://img.shields.io/npm/l/vorm-nuxt.svg?style=flat&colorA=020420&colorB=00DC82
+[license-href]: https://npmjs.com/package/vorm-nuxt
 [nuxt-src]: https://img.shields.io/badge/Nuxt-020420?logo=nuxt.js
 [nuxt-href]: https://nuxt.com
