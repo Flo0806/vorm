@@ -1,29 +1,32 @@
-import antfu from '@antfu/eslint-config'
+// @ts-check
+import eslint from '@eslint/js'
+import tseslint from 'typescript-eslint'
 
-export default antfu(
-  {
-    typescript: true,
-    vue: true,
-    formatters: true
-  },
+export default tseslint.config(
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     rules: {
-      // Stylistic rules
-      'style/semi': ['error', 'never'],
-      'style/quotes': ['error', 'single'],
-      'style/comma-dangle': ['error', 'never'], // 👈 Keine trailing commas!
-
-      // TypeScript rules
+      // TypeScript
       '@typescript-eslint/no-explicit-any': 'off',
-      'ts/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
 
-      // General rules
+      // Console is OK in Nuxt modules
       'no-console': 'off',
-      'vue/multi-word-component-names': 'off',
 
-      // Import rules
-      'import/order': 'off',
-      'sort-imports': 'off'
+      // Quotes and semi
+      'quotes': ['error', 'single'],
+      'semi': ['error', 'never']
     }
+  },
+  {
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.nuxt/**',
+      'playground/.nuxt/**',
+      'playground/.output/**',
+      'coverage/**'
+    ]
   }
 )
