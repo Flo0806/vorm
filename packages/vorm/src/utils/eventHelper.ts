@@ -49,7 +49,7 @@ export function updateFieldValue(
   ) => boolean,
   maybeValidate: (trigger: "onInput" | "onBlur", fieldName: string) => void
 ) {
-  const value = getValueFromEvent(e, field.type);
+  const value = getValueFromEvent(e, field.type as string);
   if (emitFieldEvent("input", field.name, value, e)) {
     setValueByPath(vorm.formData, field.name, value);
     vorm.dirty[field.name] = value !== vorm.initial?.[field.name];

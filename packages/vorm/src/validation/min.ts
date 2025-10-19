@@ -5,8 +5,8 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  * @param minValue
  * @returns
  */
-export function min(minValue: number): SyncValidatorFn {
-  return (value) => {
+export function min(minValue: number): SyncValidatorFn<any> {
+  return (value: any) => {
     return Number(value) >= minValue ? null : `Must be at least ${minValue}.`;
   };
 }

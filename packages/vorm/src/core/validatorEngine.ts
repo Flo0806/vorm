@@ -44,7 +44,7 @@ export async function validateFieldAsync(
  * @returns
  */
 async function applyRuleAsync(
-  rule: ValidationRule,
+  rule: ValidationRule<any>,
   value: any,
   formData: Record<string, any>
 ): Promise<string | null> {

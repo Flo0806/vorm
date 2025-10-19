@@ -66,7 +66,7 @@ export interface VormFieldSchema<
   disabled?: boolean;
   helpText?: string;
   showError?: boolean;
-  showIf?: Record<string, any> | ((formData: Record<string, any>) => boolean);
+  showIf?: ShowIfCondition;
   visibility?: (formData: Record<string, any>) => boolean;
   validation?: ValidationRule<T>[];
   validationMode?: ValidationMode;

@@ -6,8 +6,8 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  * @param max
  * @returns
  */
-export function between(min: number, max: number): SyncValidatorFn {
-  return (value) => {
+export function between(min: number, max: number): SyncValidatorFn<any> {
+  return (value: any) => {
     const num = Number(value);
     return num >= min && num <= max
       ? null

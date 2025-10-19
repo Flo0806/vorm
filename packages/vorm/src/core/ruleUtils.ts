@@ -6,9 +6,9 @@ import type {
 
 export const builtInRules: Record<
   BuiltInRuleName,
-  SyncValidatorFn | AsyncValidatorFn
+  SyncValidatorFn<any> | AsyncValidatorFn<any>
 > = {
-  required: (value) => {
+  required: (value: any) => {
     if (
       value === null ||
       value === undefined ||
@@ -19,14 +19,14 @@ export const builtInRules: Record<
     }
     return null;
   },
-  email: (value) => {
+  email: (value: any) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(value) ? null : "Invalid email address.";
   },
-  integer: (value) => {
+  integer: (value: any) => {
     return Number.isInteger(Number(value)) ? null : "Must be an integer.";
   },
-  url: (value) => {
+  url: (value: any) => {
     if (typeof value !== "string") return "Must be a valid URL.";
 
     try {
@@ -38,7 +38,7 @@ export const builtInRules: Record<
       return "Must be a valid URL.";
     }
   },
-  alpha: (value) => {
+  alpha: (value: any) => {
     return typeof value === "string" && /^[A-Za-z]+$/.test(value)
       ? null
       : "Only letters allowed.";
@@ -51,7 +51,7 @@ export function isBuiltInRule(rule: unknown): rule is BuiltInRuleName {
 
 export function isValidatorFn(
   rule: unknown
-): rule is SyncValidatorFn | AsyncValidatorFn {
+): rule is SyncValidatorFn<any> | AsyncValidatorFn<any> {
   return typeof rule === "function";
 }
 

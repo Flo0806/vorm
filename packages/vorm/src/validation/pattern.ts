@@ -6,8 +6,8 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  * @param message
  * @returns
  */
-export function pattern(regex: RegExp, message?: string): SyncValidatorFn {
-  return (value) =>
+export function pattern(regex: RegExp, message?: string): SyncValidatorFn<any> {
+  return (value: any) =>
     typeof value === "string" && regex.test(value)
       ? null
       : message ?? "Invalid format.";

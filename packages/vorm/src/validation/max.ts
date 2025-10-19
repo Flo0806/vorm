@@ -5,8 +5,8 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  * @param maxValue
  * @returns
  */
-export function max(maxValue: number): SyncValidatorFn {
-  return (value) => {
+export function max(maxValue: number): SyncValidatorFn<any> {
+  return (value: any) => {
     return Number(value) <= maxValue ? null : `Must be at most ${maxValue}.`;
   };
 }
