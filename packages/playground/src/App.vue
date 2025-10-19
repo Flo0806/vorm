@@ -12,7 +12,8 @@
     <router-link to="/autovorm-big">AutoVorm Big</router-link> |
     <router-link to="/autovorm-showif">AutoVorm ShowIf</router-link> |
     <router-link to="/autovorm-repeater">AutoVorm Repeater</router-link> |
-    <router-link to="/minmax-test">🧪 Min/Max Test</router-link>
+    <router-link to="/minmax-test">🧪 Min/Max Test</router-link> |
+    <router-link to="/field-options-bugtest">🐛 Field Options Bug Test</router-link>
   </nav>
   <router-view />
 </template>

@@ -17,7 +17,7 @@ export interface VormContext {
   touched: Record<string, boolean>;
   dirty: Record<string, boolean>;
   initial: Record<string, any>;
-  fieldOptionsMap: Map<string, Option[]>;
+  fieldOptionsMap: Record<string, Option[]>;
   validate: () => Promise<boolean>;
   validateFieldByName: (fieldName: string) => Promise<void>;
   getValidationMode: (fieldName: string) => ValidationMode;
@@ -73,7 +73,7 @@ export function useVorm(
 
   const compiledValidators = new Map<string, CompiledValidator[]>();
   const compiledAffects = new Map<string, string[]>();
-  const fieldOptionsMap = new Map<string, Option[]>();
+  const fieldOptionsMap = reactive<Record<string, Option[]>>({});
 
   schema.forEach((field) => {
     const name = field.name;
@@ -155,10 +155,13 @@ export function useVorm(
       setValueByPath(initial, key, newData[key]);
     }
 
+    // Clear old field options before setting new ones
+    Object.keys(fieldOptionsMap).forEach(key => delete fieldOptionsMap[key]);
+
     // Set fieldOptions separately (even if newData is empty)
     if (options?.fieldOptions) {
       for (const key of Object.keys(options.fieldOptions)) {
-        fieldOptionsMap.set(key, options.fieldOptions[key]);
+        fieldOptionsMap[key] = options.fieldOptions[key];
       }
     }
   }
@@ -184,7 +187,7 @@ export function useVorm(
     if (options?.dirty) dirty[name] = value !== initial[name];
 
     if (options?.fieldOptions) {
-      fieldOptionsMap.set(name, options.fieldOptions);
+      fieldOptionsMap[name] = options.fieldOptions;
     }
 
     if (options?.validate) {

@@ -291,7 +291,7 @@ function emitFieldEvent(
  * Resolves field options if defined dynamically
  */
 function resolveOptions(field: VormFieldSchema) {
-  const fromMap = vorm.fieldOptionsMap.get(field.name);
+  const fromMap = vorm.fieldOptionsMap[field.name];
   if (!fromMap) return [];
 
   return fromMap.map((opt) =>
