@@ -1,5 +1,14 @@
 # vorm-nuxt
 
+## 2.0.0
+
+### Patch Changes
+
+- [`80d911d`](https://github.com/Flo0806/vorm/commit/80d911ddbdf8843d1021a94b446b300b1caeb610) Thanks [@Flo0806](https://github.com/Flo0806)! - Update vorm-vue peer dependency range
+
+- Updated dependencies [[`290877c`](https://github.com/Flo0806/vorm/commit/290877c8d99728c8d9f06932690834ad4a33fbb8)]:
+  - vorm-vue@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes

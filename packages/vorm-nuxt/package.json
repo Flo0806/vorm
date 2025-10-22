@@ -1,7 +1,7 @@
 {
   "name": "vorm-nuxt",
   "type": "module",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Nuxt module for vorm - A Vue.js form library with automatic validation",
   "license": "MIT",
   "repository": "Flo0806/vorm",
@@ -37,7 +37,7 @@
     "@nuxt/kit": "^4.1.2"
   },
   "peerDependencies": {
-    "vorm-vue": "^1.0.0"
+    "vorm-vue": "^1.1.0"
   },
   "devDependencies": {
     "vorm-vue": "workspace:*",
