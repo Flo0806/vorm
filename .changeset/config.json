@@ -12,7 +12,8 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "docs",
-    "playground"
+    "playground",
+    "vorm-nuxt"
   ]
 }
 
