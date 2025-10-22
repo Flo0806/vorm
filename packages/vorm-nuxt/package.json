@@ -37,7 +37,7 @@
     "@nuxt/kit": "^4.1.2"
   },
   "peerDependencies": {
-    "vorm-vue": "^1.0.2"
+    "vorm-vue": "^1.0.0"
   },
   "devDependencies": {
     "vorm-vue": "workspace:*",
