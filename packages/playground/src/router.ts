@@ -14,6 +14,7 @@ import PlaygroundExtended from "./demos/PlaygroundExtended.vue";
 import PlaygroundRealWorld from "./demos/PlaygroundRealWorld.vue";
 import MinMaxTestDemo from "./demos/MinMaxTestDemo.vue";
 import FieldOptionsBugTest from "./demos/FieldOptionsBugTest.vue";
+import FormStateDemo from "./demos/FormStateDemo.vue";
 
 const routes = [
   {
@@ -86,6 +87,11 @@ const routes = [
     path: "/field-options-bugtest",
     component: FieldOptionsBugTest,
     name: "FieldOptionsBugTest",
+  },
+  {
+    path: "/form-state",
+    component: FormStateDemo,
+    name: "FormStateDemo",
   },
 ];
 

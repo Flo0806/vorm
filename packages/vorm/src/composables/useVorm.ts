@@ -1,4 +1,4 @@
-import { reactive, provide, watch, toRaw, type InjectionKey } from "vue";
+import { reactive, provide, watch, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
 import type { VormSchema, ValidationMode, Option } from "../types/schemaTypes";
 import { validateFieldAsync } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
@@ -18,6 +18,9 @@ export interface VormContext {
   dirty: Record<string, boolean>;
   initial: Record<string, any>;
   fieldOptionsMap: Record<string, Option[]>;
+  isValid: ComputedRef<boolean>;
+  isDirty: ComputedRef<boolean>;
+  isTouched: ComputedRef<boolean>;
   validate: () => Promise<boolean>;
   validateFieldByName: (fieldName: string) => Promise<void>;
   getValidationMode: (fieldName: string) => ValidationMode;
@@ -74,6 +77,23 @@ export function useVorm(
   const compiledValidators = new Map<string, CompiledValidator[]>();
   const compiledAffects = new Map<string, string[]>();
   const fieldOptionsMap = reactive<Record<string, Option[]>>({});
+
+  // Computed form-level flags for better DX
+  const isValid = computed(() => {
+    const errorValues = Object.values(errors);
+    const validatedValues = Object.values(validatedFields);
+    // Form is only valid if:
+    // 1. It has fields
+    // 2. At least one field has been validated
+    // 3. All errors are null
+    return (
+      errorValues.length > 0 &&
+      validatedValues.some(v => v === true) &&
+      errorValues.every(e => e === null)
+    );
+  });
+  const isDirty = computed(() => Object.values(dirty).some(d => d === true));
+  const isTouched = computed(() => Object.values(touched).some(t => t === true));
 
   schema.forEach((field) => {
     const name = field.name;
@@ -424,6 +444,9 @@ export function useVorm(
     dirty,
     initial,
     fieldOptionsMap,
+    isValid,
+    isDirty,
+    isTouched,
     validate,
     validateFieldByName,
     getValidationMode,
