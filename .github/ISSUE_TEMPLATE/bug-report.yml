@@ -1,0 +1,78 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in Vorm
+labels: ["bug", "pending triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below to help us understand and fix the issue.
+
+        **Before submitting:**
+        - Make sure you're using the latest version of Vorm
+        - Check if a similar issue already exists
+        - Try to provide a minimal reproduction (we've included a playground link below to get started)
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is. What did you expect to happen? What actually happened?
+      placeholder: |
+        When I use Vorm with...
+        I expected... but instead...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Please provide a minimal reproduction of the issue. This helps us identify and fix the bug much faster!
+
+        You can fork our playground: https://stackblitz.com/edit/vitejs-vite-pdfe4po5
+
+        If you cannot provide a reproduction, please explain why and provide as much detail as possible.
+      placeholder: |
+        Link to StackBlitz, CodeSandbox, or GitHub repo:
+        https://stackblitz.com/edit/...
+
+        Or describe steps to reproduce:
+        1. Create a form with...
+        2. Add a field...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please provide information about your environment.
+        You can use `npm list vorm-vue` or `pnpm list vorm-vue` to check your version.
+      placeholder: |
+        - Vorm version:
+        - Vue version:
+        - Framework (if any): Nuxt / Vite / Vue CLI
+        - Browser: Chrome 120 / Firefox 121 / Safari 17
+        - OS: macOS / Windows / Linux
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs & Error Messages
+      description: Please paste any relevant console errors or logs. Screenshots are helpful, but please also include the text.
+      render: shell
+      placeholder: |
+        Paste error logs here...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context, screenshots, or information that might help us understand the issue.
+      placeholder: Add any additional information here...

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Documentation
+    url: https://vorm.fh-softdev.de
+    about: Check out the docs to learn about Vorm's features and usage
+  - name: 💡 Discussions
+    url: https://github.com/Flo0806/vorm/discussions
+    about: Have a question or idea? Start a discussion with the community
+  - name: 🎮 Playground
+    url: https://stackblitz.com/edit/vitejs-vite-pdfe4po5
+    about: Try Vorm in our interactive playground on StackBlitz
