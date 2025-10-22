@@ -1,5 +1,12 @@
 # vorm-nuxt
 
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`290877c`](https://github.com/Flo0806/vorm/commit/290877c8d99728c8d9f06932690834ad4a33fbb8)]:
+  - vorm-vue@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes
