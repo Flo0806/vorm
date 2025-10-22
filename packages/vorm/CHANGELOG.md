@@ -1,5 +1,16 @@
 # vorm-vue
 
+## 1.1.0
+
+### Minor Changes
+
+- [#15](https://github.com/Flo0806/vorm/pull/15) [`290877c`](https://github.com/Flo0806/vorm/commit/290877c8d99728c8d9f06932690834ad4a33fbb8) Thanks [@Flo0806](https://github.com/Flo0806)! - Add form-level state flags (isValid, isDirty, isTouched)
+
+  Added reactive computed properties to VormContext for better form state management:
+  - isValid: Returns true when form has been validated and has no errors
+  - isDirty: Returns true when at least one field has been modified
+  - isTouched: Returns true when at least one field has been touched
+
 ## 1.0.2
 
 ### Patch Changes
