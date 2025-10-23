@@ -3,6 +3,7 @@ import { addComponent, addImports, addPlugin, createResolver, defineNuxtModule }
 
 export interface ModuleOptions {
   autoImports?: boolean
+  autoImportValidators?: boolean
   components?: boolean
 }
 
@@ -17,6 +18,7 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 
   defaults: {
     autoImports: true,
+    autoImportValidators: false,
     components: true
   },
 
@@ -33,6 +35,18 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
         { name: 'useVormContext', from: 'vorm-vue' },
         // Types
         { name: 'VormSchema', from: 'vorm-vue', type: true }
+      ])
+    }
+
+    if (options.autoImportValidators) {
+      addImports([
+        { name: 'minLength', from: 'vorm-vue' },
+        { name: 'maxLength', from: 'vorm-vue' },
+        { name: 'min', from: 'vorm-vue' },
+        { name: 'max', from: 'vorm-vue' },
+        { name: 'between', from: 'vorm-vue' },
+        { name: 'step', from: 'vorm-vue' },
+        { name: 'matchField', from: 'vorm-vue' }
       ])
     }
 

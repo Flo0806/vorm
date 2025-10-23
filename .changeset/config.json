@@ -13,7 +13,10 @@
   "ignore": [
     "docs",
     "playground"
-  ]
+  ],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }
 
 
