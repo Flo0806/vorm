@@ -1,5 +1,11 @@
 # vorm-vue
 
+## 1.1.1
+
+### Patch Changes
+
+- [#25](https://github.com/Flo0806/vorm/pull/25) [`053367b`](https://github.com/Flo0806/vorm/commit/053367b1212f97f3ec36f830b4426147bb0d8d14) Thanks [@Flo0806](https://github.com/Flo0806)! - Internal dependency update to align with vorm-nuxt changes
+
 ## 1.1.0
 
 ### Minor Changes
@@ -32,4 +38,3 @@
 ### Major Changes
 
 - first major version
-
