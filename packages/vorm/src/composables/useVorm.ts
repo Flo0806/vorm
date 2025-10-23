@@ -84,11 +84,11 @@ export function useVorm(
     const validatedValues = Object.values(validatedFields);
     // Form is only valid if:
     // 1. It has fields
-    // 2. At least one field has been validated
+    // 2. All fields have been validated
     // 3. All errors are null
     return (
       errorValues.length > 0 &&
-      validatedValues.some(v => v === true) &&
+      validatedValues.every(v => v === true) &&
       errorValues.every(e => e === null)
     );
   });
