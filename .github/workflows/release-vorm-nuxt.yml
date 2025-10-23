@@ -8,6 +8,7 @@ on:
     paths:
       - "packages/vorm-nuxt/package.json"
       - "packages/vorm-nuxt/CHANGELOG.md"
+  workflow_dispatch:
 
 jobs:
   check:
