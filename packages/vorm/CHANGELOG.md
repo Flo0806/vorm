@@ -1,5 +1,13 @@
 # vorm-vue
 
+## 1.1.2
+
+### Patch Changes
+
+- [#30](https://github.com/Flo0806/vorm/pull/30) [`99c68d7`](https://github.com/Flo0806/vorm/commit/99c68d7940383e09683b971d5e2be187e63de119) Thanks [@Flo0806](https://github.com/Flo0806)! - Fix isValid computed property to require all fields to be validated
+
+  The isValid property now correctly returns false until ALL fields have been validated, not just at least one field. This fixes the issue where touching a single field would incorrectly mark the entire form as valid.
+
 ## 1.1.1
 
 ### Patch Changes
