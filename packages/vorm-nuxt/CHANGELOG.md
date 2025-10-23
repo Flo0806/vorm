@@ -1,5 +1,15 @@
 # vorm-nuxt
 
+## 1.1.0
+
+### Minor Changes
+
+- [`156bb58`](https://github.com/Flo0806/vorm/commit/156bb58880c24fcd4f17b934d94844d47d411e87) Thanks [@Flo0806](https://github.com/Flo0806)! - Add validator auto-imports and peer dependency support
+  - Add `vorm-vue` as peerDependency to enable direct imports with npm/yarn
+  - Add `autoImportValidators` option (default: false) for optional validator auto-imports
+  - Auto-import all 7 validators when enabled: minLength, maxLength, min, max, between, step, matchField
+  - Add experimental changeset option to prevent unnecessary version bumps on peer dependency updates
+
 ## 1.0.2
 
 ### Patch Changes
