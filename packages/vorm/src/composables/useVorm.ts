@@ -104,7 +104,10 @@ export function useVorm(
     touched[name] = false;
     dirty[name] = false;
     initial[name] = isRepeater ? [] : "";
-    validatedFields[name] = false;
+
+    // Fields without validation rules are considered valid by default
+    const hasValidation = field.validation && field.validation.length > 0;
+    validatedFields[name] = !hasValidation;
 
     // Set default showError if not defined
     field.showError = field.showError !== false;
@@ -144,7 +147,11 @@ export function useVorm(
       if (!(name in errors)) errors[name] = null;
       if (!(name in touched)) touched[name] = false;
       if (!(name in dirty)) dirty[name] = false;
-      if (!(name in validatedFields)) validatedFields[name] = false;
+      if (!(name in validatedFields)) {
+        // Fields without validation rules are considered valid by default
+        const hasValidation = field.validation && field.validation.length > 0;
+        validatedFields[name] = !hasValidation;
+      }
       if (!(name in initial)) initial[name] = "";
       if (field.showError === undefined) field.showError = true;
     }
@@ -396,7 +403,9 @@ export function useVorm(
       initial[key] = defaultValue;
 
       errors[key] = null;
-      validatedFields[key] = false;
+      // Fields without validation rules are considered valid by default
+      const hasValidation = field.validation && field.validation.length > 0;
+      validatedFields[key] = !hasValidation;
       touched[key] = false;
       dirty[key] = false;
     });
