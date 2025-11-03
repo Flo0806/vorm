@@ -1,5 +1,11 @@
 # vorm-vue
 
+## 1.1.3
+
+### Patch Changes
+
+- [#32](https://github.com/Flo0806/vorm/pull/32) [`c3ddec1`](https://github.com/Flo0806/vorm/commit/c3ddec16eb910825d866394da14c2f9da33ae49e) Thanks [@Flo0806](https://github.com/Flo0806)! - fix(vorm-vue): isValid now correctly handles fields without validation rules. Fields without validation are now considered valid by default, allowing isValid to return true when all fields with validation rules have been validated and have no errors.
+
 ## 1.1.2
 
 ### Patch Changes
