@@ -18,7 +18,7 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 
   defaults: {
     autoImports: true,
-    autoImportValidators: false,
+    autoImportValidators: true,
     components: true
   },
 
@@ -31,10 +31,20 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 
     if (options.autoImports) {
       addImports([
+        // Composables
         { name: 'useVorm', from: 'vorm-vue' },
         { name: 'useVormContext', from: 'vorm-vue' },
-        // Types
-        { name: 'VormSchema', from: 'vorm-vue', type: true }
+        // Types - Schema
+        { name: 'VormSchema', from: 'vorm-vue', type: true },
+        { name: 'VormFieldSchema', from: 'vorm-vue', type: true },
+        { name: 'Option', from: 'vorm-vue', type: true },
+        { name: 'FieldState', from: 'vorm-vue', type: true },
+        { name: 'ValidationMode', from: 'vorm-vue', type: true },
+        // Types - Context (for reactive functions)
+        { name: 'FormContext', from: 'vorm-vue', type: true },
+        { name: 'ReactiveString', from: 'vorm-vue', type: true },
+        { name: 'ReactiveBoolean', from: 'vorm-vue', type: true },
+        { name: 'ReactiveOptions', from: 'vorm-vue', type: true },
       ])
     }
 
@@ -77,7 +87,6 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
       })
     }
 
-    console.log('✅ Vorm Nuxt Module loaded')
   }
 })
 
