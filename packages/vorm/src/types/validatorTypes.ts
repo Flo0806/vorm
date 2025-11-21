@@ -1,4 +1,5 @@
 import type { FieldValueType, FieldValueTypeMap } from "./schemaTypes.js";
+import type { ReactiveString } from "./contextTypes.js";
 
 /**
  * Default validation rules
@@ -31,7 +32,7 @@ export type AsyncValidatorFn<T extends keyof FieldValueTypeMap> = (
  */
 export interface ValidationRule<T extends keyof FieldValueTypeMap> {
   rule: BuiltInRuleName | SyncValidatorFn<T> | AsyncValidatorFn<T>;
-  message?: string;
+  message?: ReactiveString;
   affects?: string[];
 }
 

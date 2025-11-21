@@ -18,6 +18,7 @@ import {
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
 import { updateFieldValue } from "../utils/eventHelper";
+import { resolveReactive } from "../utils/reactiveResolver";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -160,6 +161,29 @@ const visibleFieldNames = computed(() => {
 });
 
 /**
+ * Resolved reactive field properties (label, placeholder, helpText)
+ * Returns plain strings, but computed updates on reactive changes
+ */
+const resolvedFields = computed(() => {
+  const result: Record<string, { label: string; placeholder: string; helpText: string }> = {};
+
+  for (const fieldName of visibleFieldNames.value) {
+    const field = getFieldConfig(fieldName);
+    const labelComputed = resolveReactive(field.label, vorm);
+    const placeholderComputed = resolveReactive(field.placeholder, vorm);
+    const helpTextComputed = resolveReactive(field.helpText, vorm);
+
+    result[fieldName] = {
+      label: labelComputed.value,
+      placeholder: placeholderComputed.value,
+      helpText: helpTextComputed.value,
+    };
+  }
+
+  return result;
+});
+
+/**
  * Builds up field states for each visible field
  */
 const fieldStates = computed(() =>
@@ -263,6 +287,43 @@ function getFieldConfig(name: string): VormFieldSchema {
 }
 
 /**
+ * Field schema with resolved reactive strings for direct template use
+ * Plain strings are returned, but remain reactive through computed dependencies
+ */
+type ResolvedVormFieldSchema = Omit<VormFieldSchema, 'label' | 'placeholder' | 'helpText'> & {
+  label?: string;
+  placeholder?: string;
+  helpText?: string;
+};
+
+/**
+ * Returns the field config with resolved reactive strings for template use
+ * Returns plain strings that update reactively through computed dependencies
+ */
+function getResolvedFieldConfig(name: string): ResolvedVormFieldSchema {
+  const field = getFieldConfig(name);
+  const resolved = resolvedFields.value[name];
+
+  if (!resolved) {
+    // If no resolved values, convert to strings for type safety
+    return {
+      ...field,
+      label: typeof field.label === 'string' ? field.label : '',
+      placeholder: typeof field.placeholder === 'string' ? field.placeholder : '',
+      helpText: typeof field.helpText === 'string' ? field.helpText : '',
+    };
+  }
+
+  // Return plain strings - reactivity maintained through resolvedFields computed
+  return {
+    ...field,
+    label: resolved.label,
+    placeholder: resolved.placeholder,
+    helpText: resolved.helpText,
+  };
+}
+
+/**
  * Emits synthetic input/blur/validate events
  */
 function emitFieldEvent(
@@ -316,6 +377,7 @@ function renderDefaultInput(fieldName: string) {
         ? config.type
         : undefined,
     value,
+    placeholder: resolvedFields.value[fieldName]?.placeholder || undefined,
     onInput: (e: any) =>
       updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
     onBlur: (e: any) => {
@@ -357,7 +419,7 @@ function renderDefaultInput(fieldName: string) {
  * Renders slot or input content
  */
 function renderFieldContent(fieldName: string) {
-  const field = getFieldConfig(fieldName);
+  const field = getResolvedFieldConfig(fieldName);
   if (slots[fieldName]) {
     return h(
       "div",
@@ -482,7 +544,7 @@ onMounted(() => {
         v-if="hasSlot(`wrapper:${fieldName}`)"
         :name="`wrapper:${fieldName}`"
         :slotName="`wrapper:${fieldName}`"
-        :field="getFieldConfig(fieldName)"
+        :field="getResolvedFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
@@ -493,7 +555,7 @@ onMounted(() => {
         v-else-if="hasSlotMatchingWrapperMulti(fieldName)"
         :name="getWrapperSlotName(fieldName)"
         :slotName="`wrapper:${fieldName}`"
-        :field="getFieldConfig(fieldName)"
+        :field="getResolvedFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
@@ -504,7 +566,7 @@ onMounted(() => {
         v-else-if="hasSlot('wrapper')"
         name="wrapper"
         slotName="wrapper"
-        :field="getFieldConfig(fieldName)"
+        :field="getResolvedFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
@@ -531,10 +593,17 @@ onMounted(() => {
           {{
             hasDirectOrAncestrySlot(fieldName)
               ? ""
-              : getFieldConfig(fieldName).label
+              : resolvedFields[fieldName].label
           }}
         </label>
         <component :is="renderFieldContent(fieldName)" />
+
+        <p
+          v-if="resolvedFields[fieldName].helpText"
+          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'vorm-help'"
+        >
+          {{ resolvedFields[fieldName].helpText }}
+        </p>
 
         <p
           v-if="

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { compileField } from "../../core/validatorCompiler";
+import type { ErrorData } from "../../types/i18nTypes";
 
 describe("compileField", () => {
   it("compiles a required built-in rule", async () => {
@@ -9,8 +10,9 @@ describe("compileField", () => {
     };
 
     const validators = compileField(schema as any);
-    const result = await validators[0]("", {});
-    expect(result).toContain("required");
+    const result = await validators[0]("", {}) as ErrorData;
+    expect(result).not.toBeNull();
+    expect(result.messageRef).toContain("required");
   });
 
   it("returns null for valid value with built-in rule", async () => {
@@ -32,7 +34,9 @@ describe("compileField", () => {
     };
 
     const validators = compileField(schema as any);
-    expect(await validators[0]("xyz", {})).toBe("Must be abc");
+    const errorResult = await validators[0]("xyz", {}) as ErrorData;
+    expect(errorResult).not.toBeNull();
+    expect(errorResult.messageRef).toBe("Must be abc");
     expect(await validators[0]("abc", {})).toBeNull();
   });
 
@@ -51,7 +55,10 @@ describe("compileField", () => {
     };
 
     const validators = compileField(schema as any);
-    expect(await validators[0]("fail", {})).toBe("Field Status must be ok");
+    const result = await validators[0]("fail", {}) as ErrorData;
+    expect(result).not.toBeNull();
+    expect(result.messageRef).toBe("Field {1} must be ok");
+    expect(result.params).toEqual(["Status"]);
   });
 
   it("formats using rule.message override", async () => {
@@ -66,7 +73,10 @@ describe("compileField", () => {
     };
 
     const validators = compileField(schema as any);
-    expect(await validators[0]("bad", {})).toBe("Custom X override");
+    const result = await validators[0]("bad", {}) as ErrorData;
+    expect(result).not.toBeNull();
+    expect(result.messageRef).toBe("Custom {1} override");
+    expect(result.params).toEqual(["X"]);
   });
 
   it("warns on invalid rule", async () => {

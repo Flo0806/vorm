@@ -14,7 +14,8 @@
     <router-link to="/autovorm-repeater">AutoVorm Repeater</router-link> |
     <router-link to="/form-state">🚦 Form State</router-link> |
     <router-link to="/minmax-test">🧪 Min/Max Test</router-link> |
-    <router-link to="/field-options-bugtest">🐛 Field Options Bug Test</router-link>
+    <router-link to="/field-options-bugtest">🐛 Field Options Bug Test</router-link> |
+    <router-link to="/i18n">🌍 i18n Demo</router-link>
   </nav>
   <router-view />
 </template>

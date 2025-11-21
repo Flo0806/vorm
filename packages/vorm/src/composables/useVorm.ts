@@ -1,6 +1,8 @@
-import { reactive, provide, watch, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
+import { reactive, provide, watch, watchEffect, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
 import type { VormSchema, ValidationMode, Option } from "../types/schemaTypes";
-import { validateFieldAsync } from "../core/validatorEngine";
+import type { VormI18n, ErrorData } from "../types/i18nTypes";
+import type { FormContext } from "../types/contextTypes";
+import { validateFieldAsyncInternal } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
 import {
   compileField,
@@ -8,6 +10,7 @@ import {
 } from "../core/validatorCompiler.js";
 import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
 import { isFieldInSchema } from "../utils/isFieldInSchema.js";
+import { resolveMessage } from "../i18n/messageResolver.js";
 
 export interface VormContext {
   schema: VormSchema;
@@ -18,6 +21,7 @@ export interface VormContext {
   dirty: Record<string, boolean>;
   initial: Record<string, any>;
   fieldOptionsMap: Record<string, Option[]>;
+  i18n?: VormI18n;
   isValid: ComputedRef<boolean>;
   isDirty: ComputedRef<boolean>;
   isTouched: ComputedRef<boolean>;
@@ -62,13 +66,14 @@ export interface VormContext {
 
 export function useVorm(
   schema: VormSchema,
-  options?: { validationMode?: ValidationMode; key?: symbol | string }
+  options?: { validationMode?: ValidationMode; key?: symbol | string; i18n?: VormI18n }
 ): VormContext {
   const formData = reactive<Record<string, any>>({});
-  const errors = reactive<Record<string, string | null>>({});
+  const errorData = reactive<Record<string, ErrorData | null>>({});
   const validatedFields = reactive<Record<string, boolean>>({});
 
   const globalValidationMode = options?.validationMode || "onSubmit";
+  const i18nContext = options?.i18n;
 
   const touched = reactive<Record<string, boolean>>({});
   const dirty = reactive<Record<string, boolean>>({});
@@ -78,8 +83,62 @@ export function useVorm(
   const compiledAffects = new Map<string, string[]>();
   const fieldOptionsMap = reactive<Record<string, Option[]>>({});
 
+  // Reactive errors object - updated by watchEffect when errorData or i18n changes
+  const errors = reactive<Record<string, string | null>>({});
+
+  // Forward declaration for computed flags
+  let isValid: ComputedRef<boolean>;
+  let isDirty: ComputedRef<boolean>;
+  let isTouched: ComputedRef<boolean>;
+
+  // Create FormContext for reactive functions - using lazy getters
+  const createFormContext = (): FormContext => ({
+    formData,
+    get errors() {
+      return errors;
+    },
+    get isValid() {
+      return isValid.value;
+    },
+    get isDirty() {
+      return isDirty.value;
+    },
+    get isTouched() {
+      return isTouched.value;
+    },
+    get touched() {
+      return touched;
+    },
+    get dirty() {
+      return dirty;
+    },
+  });
+
+  // Watch errorData and update errors reactively - resolves ErrorData to strings
+  watchEffect(() => {
+    const formContext = createFormContext();
+
+    // Remove keys that are no longer in errorData
+    for (const key in errors) {
+      if (!(key in errorData)) {
+        delete errors[key];
+      }
+    }
+
+    // Update/add keys from errorData
+    for (const fieldName in errorData) {
+      const error = errorData[fieldName];
+      if (!error) {
+        errors[fieldName] = null;
+      } else {
+        // Resolve message reactively with form context
+        errors[fieldName] = resolveMessage(error.messageRef, i18nContext, error.params, formContext);
+      }
+    }
+  });
+
   // Computed form-level flags for better DX
-  const isValid = computed(() => {
+  isValid = computed(() => {
     const errorValues = Object.values(errors);
     const validatedValues = Object.values(validatedFields);
     // Form is only valid if:
@@ -92,15 +151,15 @@ export function useVorm(
       errorValues.every(e => e === null)
     );
   });
-  const isDirty = computed(() => Object.values(dirty).some(d => d === true));
-  const isTouched = computed(() => Object.values(touched).some(t => t === true));
+  isDirty = computed(() => Object.values(dirty).some(d => d === true));
+  isTouched = computed(() => Object.values(touched).some(t => t === true));
 
   schema.forEach((field) => {
     const name = field.name;
     const isRepeater = field.type === "repeater";
 
     formData[name] = isRepeater ? [] : "";
-    errors[name] = null;
+    errorData[name] = null;
     touched[name] = false;
     dirty[name] = false;
     initial[name] = isRepeater ? [] : "";
@@ -144,7 +203,7 @@ export function useVorm(
     for (const field of newSchema) {
       const name = field.name;
       if (!(name in formData)) formData[name] = "";
-      if (!(name in errors)) errors[name] = null;
+      if (!(name in errorData)) errorData[name] = null;
       if (!(name in touched)) touched[name] = false;
       if (!(name in dirty)) dirty[name] = false;
       if (!(name in validatedFields)) {
@@ -160,7 +219,7 @@ export function useVorm(
     for (const key of Object.keys(formData)) {
       if (!validNames.has(key)) {
         delete formData[key];
-        delete errors[key];
+        delete errorData[key];
         delete touched[key];
         delete dirty[key];
         delete validatedFields[key];
@@ -309,7 +368,7 @@ export function useVorm(
   async function validate(): Promise<boolean> {
     const raw = toRaw(formData);
 
-    const tempErrors: Record<string, string | null> = {};
+    const tempErrors: Record<string, ErrorData | null> = {};
     const tempValidated: Record<string, boolean> = {};
     const tempTouched: Record<string, boolean> = {};
 
@@ -357,8 +416,8 @@ export function useVorm(
     }
 
     for (const key in tempErrors) {
-      if (errors[key] !== tempErrors[key]) {
-        errors[key] = tempErrors[key];
+      if (errorData[key] !== tempErrors[key]) {
+        errorData[key] = tempErrors[key];
       }
     }
 
@@ -374,8 +433,8 @@ export function useVorm(
     const field = schema.find((f) => f.name === fieldName);
     if (field) {
       touched[field.name] = true;
-      const error = await validateFieldAsync(field, formData, errors);
-      errors[field.name] = error;
+      const error = await validateFieldAsyncInternal(field, formData, errorData);
+      errorData[field.name] = error;
       validatedFields[field.name] = true;
     }
   }
@@ -402,7 +461,7 @@ export function useVorm(
       setValueByPath(formData, key, defaultValue);
       initial[key] = defaultValue;
 
-      errors[key] = null;
+      errorData[key] = null;
       // Fields without validation rules are considered valid by default
       const hasValidation = field.validation && field.validation.length > 0;
       validatedFields[key] = !hasValidation;
@@ -453,6 +512,7 @@ export function useVorm(
     dirty,
     initial,
     fieldOptionsMap,
+    i18n: i18nContext,
     isValid,
     isDirty,
     isTouched,

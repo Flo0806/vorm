@@ -6,7 +6,7 @@ import type { SyncValidatorFn } from "../types/validatorTypes.js";
  */
 export function maxLength(max: number): SyncValidatorFn<any> {
   return (value: any) => {
-    if (typeof value !== "string") return `Must be at most ${max} characters.`;
-    return value.length <= max ? null : `Must be at most ${max} characters.`;
+    if (typeof value !== "string") return { message: "vorm.validation.maxLength", params: [max] };
+    return value.length <= max ? null : { message: "vorm.validation.maxLength", params: [max] };
   };
 }

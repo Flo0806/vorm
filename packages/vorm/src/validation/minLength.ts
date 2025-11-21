@@ -6,7 +6,7 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  */
 export function minLength(min: number): SyncValidatorFn<any> {
   return (value: any) => {
-    if (typeof value !== "string") return `Must be at least ${min} characters.`;
-    return value.length >= min ? null : `Must be at least ${min} characters.`;
+    if (typeof value !== "string") return { message: "vorm.validation.minLength", params: [min] };
+    return value.length >= min ? null : { message: "vorm.validation.minLength", params: [min] };
   };
 }

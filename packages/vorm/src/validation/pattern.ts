@@ -10,5 +10,5 @@ export function pattern(regex: RegExp, message?: string): SyncValidatorFn<any> {
   return (value: any) =>
     typeof value === "string" && regex.test(value)
       ? null
-      : message ?? "Invalid format.";
+      : message ?? "vorm.validation.pattern";
 }

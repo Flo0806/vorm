@@ -11,6 +11,6 @@ export function between(min: number, max: number): SyncValidatorFn<any> {
     const num = Number(value);
     return num >= min && num <= max
       ? null
-      : `Must be between ${min} and ${max}.`;
+      : { message: "vorm.validation.between", params: [min, max] };
   };
 }

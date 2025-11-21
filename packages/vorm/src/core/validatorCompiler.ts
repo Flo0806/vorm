@@ -1,7 +1,7 @@
 import type { VormFieldSchema } from "../types/schemaTypes";
+import type { ErrorData } from "../types/i18nTypes";
 import {
   builtInRules,
-  formatMessage,
   isBuiltInRule,
   isValidatorFn,
 } from "./ruleUtils";
@@ -9,7 +9,7 @@ import {
 export type CompiledValidator = (
   value: any,
   formData: any
-) => Promise<string | null>;
+) => Promise<ErrorData | null>;
 
 export function compileField(field: VormFieldSchema): CompiledValidator[] {
   return (field.validation || []).map((rule) => {
@@ -36,9 +36,11 @@ export function compileField(field: VormFieldSchema): CompiledValidator[] {
           ? { message: final, params: undefined }
           : final;
 
-      return rule.message
-        ? formatMessage(rule.message, params)
-        : formatMessage(message, params);
+      // Return ErrorData - preserve messageRef for reactive resolution
+      return {
+        messageRef: rule.message || message,
+        params,
+      };
     };
 
     return fn;

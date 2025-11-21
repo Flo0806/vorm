@@ -7,6 +7,6 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  */
 export function max(maxValue: number): SyncValidatorFn<any> {
   return (value: any) => {
-    return Number(value) <= maxValue ? null : `Must be at most ${maxValue}.`;
+    return Number(value) <= maxValue ? null : { message: "vorm.validation.max", params: [maxValue] };
   };
 }
