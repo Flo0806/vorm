@@ -11,7 +11,7 @@ import {
 import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
 import { isFieldInSchema } from "../utils/isFieldInSchema.js";
 import { resolveMessage } from "../i18n/messageResolver.js";
-import { resolveReactiveOptions } from "../utils/reactiveResolver.js";
+import { resolveReactiveOptions, resolveReactiveBoolean } from "../utils/reactiveResolver.js";
 
 export interface VormContext {
   schema: VormSchema;
@@ -71,6 +71,7 @@ export interface VormContext {
     options: Option[];
     error: string | undefined;
     errorMessages: string[];
+    disabled: boolean;
   }>;
 }
 
@@ -547,7 +548,22 @@ export function useVorm(
    * <VSelect v-bind="vorm.bindField('country')" />
    */
   function bindField(fieldName: string) {
-    const options = getFieldOptions(fieldName);
+    const fieldOptions = getFieldOptions(fieldName);
+    const field = schema.find(f => f.name === fieldName);
+
+    // Create a minimal VormContext-like object for resolveReactiveBoolean
+    // We can't use `context` here as it's defined later in the scope
+    const vormContextLike = {
+      formData,
+      errors,
+      isValid,
+      isDirty,
+      isTouched,
+      touched,
+      dirty,
+    } as VormContext;
+
+    const disabledComputed = resolveReactiveBoolean(field?.disabled, vormContextLike);
 
     return computed(() => ({
       modelValue: formData[fieldName],
@@ -559,10 +575,11 @@ export function useVorm(
         });
       },
       // Include both 'items' (Vuetify) and 'options' (generic)
-      items: options.value,
-      options: options.value,
+      items: fieldOptions.value,
+      options: fieldOptions.value,
       error: errors[fieldName] || undefined,
       errorMessages: errors[fieldName] ? [errors[fieldName]] : [],
+      disabled: disabledComputed.value,
     }));
   }
 

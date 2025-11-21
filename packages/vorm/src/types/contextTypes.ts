@@ -50,3 +50,14 @@ export type ReactiveString =
   | ComputedRef<string>
   | (() => string)
   | ((ctx: FormContext) => string);
+
+/**
+ * Reactive boolean that can be static, ref, computed, or function
+ * Useful for disabled, readonly, or other boolean properties that depend on form state
+ */
+export type ReactiveBoolean =
+  | boolean
+  | import("vue").Ref<boolean>
+  | ComputedRef<boolean>
+  | (() => boolean)
+  | ((ctx: FormContext) => boolean);

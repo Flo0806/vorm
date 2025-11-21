@@ -1,5 +1,5 @@
 import { computed, unref, isRef, type ComputedRef, type Ref } from "vue";
-import type { ReactiveString, FormContext } from "../types/contextTypes";
+import type { ReactiveString, ReactiveBoolean, FormContext } from "../types/contextTypes";
 import type { ReactiveOptions, Option } from "../types/schemaTypes";
 import type { VormContext } from "../composables/useVorm";
 
@@ -147,5 +147,65 @@ export function resolveReactiveOptions(
     }
 
     return [];
+  });
+}
+
+/**
+ * Resolves a ReactiveBoolean to a ComputedRef<boolean>
+ * Handles: boolean, Ref<boolean>, ComputedRef<boolean>, Function, Function with FormContext
+ *
+ * @param value - The reactive boolean value to resolve
+ * @param vormContext - Optional vorm context for functions that need formData access
+ * @returns ComputedRef that updates when dependencies change
+ */
+export function resolveReactiveBoolean(
+  value: ReactiveBoolean | undefined,
+  vormContext?: VormContext
+): ComputedRef<boolean> {
+  return computed(() => {
+    if (value === undefined || value === null) {
+      return false;
+    }
+
+    // Handle plain boolean
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    // Handle functions
+    if (typeof value === "function") {
+      // Check if function expects FormContext parameter
+      if (vormContext && value.length > 0) {
+        // Create lazy FormContext to avoid unnecessary reactivity tracking
+        const ctx: FormContext = {
+          formData: vormContext.formData,
+          get errors() {
+            return vormContext.errors;
+          },
+          get isValid() {
+            return vormContext.isValid.value;
+          },
+          get isDirty() {
+            return vormContext.isDirty.value;
+          },
+          get isTouched() {
+            return vormContext.isTouched.value;
+          },
+          get touched() {
+            return vormContext.touched;
+          },
+          get dirty() {
+            return vormContext.dirty;
+          },
+        };
+        return (value as (ctx: FormContext) => boolean)(ctx);
+      }
+
+      // Function without parameters
+      return (value as () => boolean)();
+    }
+
+    // Handle Ref/ComputedRef
+    return unref(value);
   });
 }
