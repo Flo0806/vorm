@@ -1,5 +1,46 @@
 # vorm-vue
 
+## 1.2.0
+
+### Minor Changes
+
+- [#40](https://github.com/Flo0806/vorm/pull/40) [`cf4eb54`](https://github.com/Flo0806/vorm/commit/cf4eb544129ec402e471485ce0a7bd0a254a02e8) Thanks [@Flo0806](https://github.com/Flo0806)! - Make disabled property reactive with function support
+  - Added `ReactiveBoolean` type for reactive boolean properties
+  - Extended `disabled` in `VormFieldSchema` to accept functions with `FormContext`
+  - `disabled` now supports: `boolean`, `Ref<boolean>`, `ComputedRef<boolean>`, `() => boolean`, `(ctx: FormContext) => boolean`
+  - AutoVorm resolves `disabled` reactively and passes it to slot bindings
+  - `bindField()` now includes `disabled` in its return value
+
+  Example:
+
+  ```typescript
+  {
+    name: 'submit',
+    disabled: (ctx) => !ctx.formData.agreeToTerms || !ctx.isValid
+  }
+  ```
+
+- [#37](https://github.com/Flo0806/vorm/pull/37) [`d7ba028`](https://github.com/Flo0806/vorm/commit/d7ba028ecc69b511585c42158d71bb4d1e0319d8) Thanks [@Flo0806](https://github.com/Flo0806)! - Improve developer experience with reactive errors and resolved slot props
+  - `vorm.errors` is now a reactive object - access errors directly with `vorm.errors.email` instead of `vorm.errors.value.email`
+  - AutoVorm slot props now receive resolved strings for `label`, `placeholder`, and `helpText` instead of ReactiveString types
+  - Full i18n reactivity maintained - dynamic placeholders and labels update reactively when form data or locale changes
+
+- [#39](https://github.com/Flo0806/vorm/pull/39) [`9f7c002`](https://github.com/Flo0806/vorm/commit/9f7c002d799adc4323f4ebf579cfd09e9191b786) Thanks [@Flo0806](https://github.com/Flo0806)! - Add schema options and bindField for custom component support
+  - Added `options` field to `VormFieldSchema` for select/radio/autocomplete fields
+  - Extended `Option` type with custom data support (`[key: string]: any`)
+  - Added `ReactiveOptions` type (static array, Ref, Computed, Function, Async)
+  - Added `getFieldOptions()` helper for reactive option access
+  - Added `bindField()` method for easy custom component binding
+  - AutoVorm wrapper-slots now provide `modelValue`, `items`, `options`, `error`, `errorMessages`, `onUpdate:modelValue`
+  - Full backward compatibility with `fieldOptionsMap`
+
+### Patch Changes
+
+- [#41](https://github.com/Flo0806/vorm/pull/41) [`58bf497`](https://github.com/Flo0806/vorm/commit/58bf497f6738a3713a76d0e1f62328a6aa1eca99) Thanks [@Flo0806](https://github.com/Flo0806)! - Fix affects cascade: clear errors on affected fields when source validation passes
+
+  When a field with `affects` array passes validation, the affected fields are now
+  re-validated to clear any errors that were propagated from the source field.
+
 ## 1.1.3
 
 ### Patch Changes

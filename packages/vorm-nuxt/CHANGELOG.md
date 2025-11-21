@@ -1,5 +1,21 @@
 # vorm-nuxt
 
+## 1.2.0
+
+### Minor Changes
+
+- [#42](https://github.com/Flo0806/vorm/pull/42) [`26c5b3c`](https://github.com/Flo0806/vorm/commit/26c5b3cef0db934583740bbc2bd1b029ab4685c0) Thanks [@Flo0806](https://github.com/Flo0806)! - Enhanced auto-imports and improved defaults
+  - Changed `autoImportValidators` default to `true`
+  - Added type auto-imports: `VormFieldSchema`, `Option`, `FieldState`, `ValidationMode`
+  - Added reactive type auto-imports: `FormContext`, `ReactiveString`, `ReactiveBoolean`, `ReactiveOptions`
+  - Removed console.log from module setup
+  - Updated plugin version to 1.1.0
+
+### Patch Changes
+
+- Updated dependencies [[`58bf497`](https://github.com/Flo0806/vorm/commit/58bf497f6738a3713a76d0e1f62328a6aa1eca99), [`cf4eb54`](https://github.com/Flo0806/vorm/commit/cf4eb544129ec402e471485ce0a7bd0a254a02e8), [`d7ba028`](https://github.com/Flo0806/vorm/commit/d7ba028ecc69b511585c42158d71bb4d1e0319d8), [`9f7c002`](https://github.com/Flo0806/vorm/commit/9f7c002d799adc4323f4ebf579cfd09e9191b786)]:
+  - vorm-vue@1.2.0
+
 ## 1.1.0
 
 ### Minor Changes
