@@ -349,13 +349,14 @@ function emitFieldEvent(
 }
 
 /**
- * Resolves field options if defined dynamically
+ * Resolves field options from schema or fieldOptionsMap
  */
 function resolveOptions(field: VormFieldSchema) {
-  const fromMap = vorm.fieldOptionsMap[field.name];
-  if (!fromMap) return [];
+  // Get options from getFieldOptions (handles both schema.options and fieldOptionsMap)
+  const options = vorm.getFieldOptions(field.name).value;
+  if (!options || options.length === 0) return [];
 
-  return fromMap.map((opt) =>
+  return options.map((opt) =>
     typeof opt === "string" ? { label: opt, value: opt } : opt
   );
 }
@@ -425,6 +426,7 @@ function renderFieldContent(fieldName: string) {
       "div",
       {},
       slots[fieldName]?.({
+        ...vorm.bindField(fieldName).value,
         slotName: fieldName,
         field,
         state: fieldStates.value[fieldName],
@@ -549,6 +551,7 @@ onMounted(() => {
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
         :path="fieldName"
+        v-bind="vorm.bindField(fieldName).value"
       />
 
       <slot
@@ -560,6 +563,7 @@ onMounted(() => {
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
         :path="fieldName"
+        v-bind="vorm.bindField(fieldName).value"
       />
 
       <slot
@@ -571,6 +575,7 @@ onMounted(() => {
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
         :path="fieldName"
+        v-bind="vorm.bindField(fieldName).value"
       />
 
       <component

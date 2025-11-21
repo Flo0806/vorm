@@ -15,7 +15,8 @@
     <router-link to="/form-state">🚦 Form State</router-link> |
     <router-link to="/minmax-test">🧪 Min/Max Test</router-link> |
     <router-link to="/field-options-bugtest">🐛 Field Options Bug Test</router-link> |
-    <router-link to="/i18n">🌍 i18n Demo</router-link>
+    <router-link to="/i18n">🌍 i18n Demo</router-link> |
+    <router-link to="/vorm-directive">🎯 Vorm Directive</router-link>
   </nav>
   <router-view />
 </template>

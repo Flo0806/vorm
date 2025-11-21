@@ -1,5 +1,6 @@
-import { computed, unref, type ComputedRef } from "vue";
+import { computed, unref, isRef, type ComputedRef, type Ref } from "vue";
 import type { ReactiveString, FormContext } from "../types/contextTypes";
+import type { ReactiveOptions, Option } from "../types/schemaTypes";
 import type { VormContext } from "../composables/useVorm";
 
 /**
@@ -103,4 +104,48 @@ export function resolveReactiveOnce(
   }
 
   return unref(value);
+}
+
+/**
+ * Resolves ReactiveOptions to a ComputedRef<Option[]>
+ * Handles: Option[], Ref<Option[]>, ComputedRef<Option[]>, () => Option[], () => Promise<Option[]>
+ *
+ * @param options - The reactive options value to resolve
+ * @returns ComputedRef that updates when dependencies change
+ */
+export function resolveReactiveOptions(
+  options: ReactiveOptions | undefined
+): ComputedRef<Option[]> {
+  return computed(() => {
+    if (options === undefined || options === null) {
+      return [];
+    }
+
+    // Handle functions
+    if (typeof options === "function") {
+      const result = options();
+
+      // Handle async functions - for now return empty array
+      // In the future we could track loading state
+      if (result instanceof Promise) {
+        // Note: This will return empty until the promise resolves
+        // A more sophisticated implementation would track the promise state
+        return [];
+      }
+
+      return result;
+    }
+
+    // Handle Ref/ComputedRef/Array
+    if (isRef(options)) {
+      return unref(options);
+    }
+
+    // Handle plain array
+    if (Array.isArray(options)) {
+      return options;
+    }
+
+    return [];
+  });
 }

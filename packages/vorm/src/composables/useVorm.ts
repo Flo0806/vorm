@@ -11,6 +11,7 @@ import {
 import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
 import { isFieldInSchema } from "../utils/isFieldInSchema.js";
 import { resolveMessage } from "../i18n/messageResolver.js";
+import { resolveReactiveOptions } from "../utils/reactiveResolver.js";
 
 export interface VormContext {
   schema: VormSchema;
@@ -62,6 +63,15 @@ export interface VormContext {
   getErrors: () => Record<string, string | null>;
   getTouched: () => Record<string, boolean>;
   getDirty: () => Record<string, boolean>;
+  getFieldOptions: (fieldName: string) => ComputedRef<Option[]>;
+  bindField: (fieldName: string) => ComputedRef<{
+    modelValue: any;
+    'onUpdate:modelValue': (value: any) => void;
+    items: Option[];
+    options: Option[];
+    error: string | undefined;
+    errorMessages: string[];
+  }>;
 }
 
 export function useVorm(
@@ -503,6 +513,59 @@ export function useVorm(
     return { ...dirty };
   }
 
+  /**
+   * Get options for a specific field
+   * First checks if field has options in schema, then falls back to fieldOptionsMap
+   * @param fieldName - The name of the field
+   * @returns ComputedRef with the field's options
+   */
+  function getFieldOptions(fieldName: string): ComputedRef<Option[]> {
+    return computed(() => {
+      // Find field in schema
+      const field = schema.find(f => f.name === fieldName);
+
+      // If field has options in schema, resolve them
+      if (field?.options) {
+        const resolved = resolveReactiveOptions(field.options);
+        return resolved.value;
+      }
+
+      // Fallback to fieldOptionsMap for backward compatibility
+      return fieldOptionsMap[fieldName] || [];
+    });
+  }
+
+  /**
+   * Helper to bind vorm field data to custom components (e.g. Vuetify)
+   * Returns reactive props that can be spread with v-bind
+   *
+   * @param fieldName - The name of the field
+   * @returns ComputedRef with modelValue, options, error, and event handler
+   *
+   * @example
+   * <VTextField v-bind="vorm.bindField('username')" />
+   * <VSelect v-bind="vorm.bindField('country')" />
+   */
+  function bindField(fieldName: string) {
+    const options = getFieldOptions(fieldName);
+
+    return computed(() => ({
+      modelValue: formData[fieldName],
+      'onUpdate:modelValue': (value: any) => {
+        updateField(fieldName, value, {
+          touched: true,
+          dirty: true,
+          validate: true,
+        });
+      },
+      // Include both 'items' (Vuetify) and 'options' (generic)
+      items: options.value,
+      options: options.value,
+      error: errors[fieldName] || undefined,
+      errorMessages: errors[fieldName] ? [errors[fieldName]] : [],
+    }));
+  }
+
   const context: VormContext = {
     schema,
     formData,
@@ -531,6 +594,8 @@ export function useVorm(
     getErrors,
     getTouched,
     getDirty,
+    getFieldOptions,
+    bindField,
   };
 
   const key = options?.key || VormContextKey;
