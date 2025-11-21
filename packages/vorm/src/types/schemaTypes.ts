@@ -1,6 +1,6 @@
 import type { Ref, ComputedRef } from "vue";
 import type { ValidationRule } from "./validatorTypes";
-import type { ReactiveString } from "./contextTypes";
+import type { ReactiveString, ReactiveBoolean } from "./contextTypes";
 
 export type ValidationMode = "onInput" | "onBlur" | "onSubmit";
 
@@ -79,7 +79,15 @@ export interface VormFieldSchema<
   label?: ReactiveString;
   placeholder?: ReactiveString;
   required?: boolean;
-  disabled?: boolean;
+  /**
+   * Whether the field is disabled
+   * Can be a static boolean or a function that receives FormContext
+   * @example
+   * disabled: true
+   * disabled: (ctx) => !ctx.formData.agreeToTerms
+   * disabled: (ctx) => ctx.formData.password.length < 8
+   */
+  disabled?: ReactiveBoolean;
   helpText?: ReactiveString;
   showError?: boolean;
   showIf?: ShowIfCondition;

@@ -55,6 +55,7 @@ function createMockVormContext() {
       options: [],
       error: context.errors[fieldName] || undefined,
       errorMessages: context.errors[fieldName] ? [context.errors[fieldName]] : [],
+      disabled: false,
     })),
   };
 

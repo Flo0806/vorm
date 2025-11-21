@@ -18,7 +18,7 @@ import {
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
 import { updateFieldValue } from "../utils/eventHelper";
-import { resolveReactive } from "../utils/reactiveResolver";
+import { resolveReactive, resolveReactiveBoolean } from "../utils/reactiveResolver";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -161,22 +161,24 @@ const visibleFieldNames = computed(() => {
 });
 
 /**
- * Resolved reactive field properties (label, placeholder, helpText)
- * Returns plain strings, but computed updates on reactive changes
+ * Resolved reactive field properties (label, placeholder, helpText, disabled)
+ * Returns plain values, but computed updates on reactive changes
  */
 const resolvedFields = computed(() => {
-  const result: Record<string, { label: string; placeholder: string; helpText: string }> = {};
+  const result: Record<string, { label: string; placeholder: string; helpText: string; disabled: boolean }> = {};
 
   for (const fieldName of visibleFieldNames.value) {
     const field = getFieldConfig(fieldName);
     const labelComputed = resolveReactive(field.label, vorm);
     const placeholderComputed = resolveReactive(field.placeholder, vorm);
     const helpTextComputed = resolveReactive(field.helpText, vorm);
+    const disabledComputed = resolveReactiveBoolean(field.disabled, vorm);
 
     result[fieldName] = {
       label: labelComputed.value,
       placeholder: placeholderComputed.value,
       helpText: helpTextComputed.value,
+      disabled: disabledComputed.value,
     };
   }
 
@@ -287,39 +289,42 @@ function getFieldConfig(name: string): VormFieldSchema {
 }
 
 /**
- * Field schema with resolved reactive strings for direct template use
- * Plain strings are returned, but remain reactive through computed dependencies
+ * Field schema with resolved reactive values for direct template use
+ * Plain values are returned, but remain reactive through computed dependencies
  */
-type ResolvedVormFieldSchema = Omit<VormFieldSchema, 'label' | 'placeholder' | 'helpText'> & {
+type ResolvedVormFieldSchema = Omit<VormFieldSchema, 'label' | 'placeholder' | 'helpText' | 'disabled'> & {
   label?: string;
   placeholder?: string;
   helpText?: string;
+  disabled?: boolean;
 };
 
 /**
- * Returns the field config with resolved reactive strings for template use
- * Returns plain strings that update reactively through computed dependencies
+ * Returns the field config with resolved reactive values for template use
+ * Returns plain values that update reactively through computed dependencies
  */
 function getResolvedFieldConfig(name: string): ResolvedVormFieldSchema {
   const field = getFieldConfig(name);
   const resolved = resolvedFields.value[name];
 
   if (!resolved) {
-    // If no resolved values, convert to strings for type safety
+    // If no resolved values, convert to plain values for type safety
     return {
       ...field,
       label: typeof field.label === 'string' ? field.label : '',
       placeholder: typeof field.placeholder === 'string' ? field.placeholder : '',
       helpText: typeof field.helpText === 'string' ? field.helpText : '',
+      disabled: typeof field.disabled === 'boolean' ? field.disabled : false,
     };
   }
 
-  // Return plain strings - reactivity maintained through resolvedFields computed
+  // Return plain values - reactivity maintained through resolvedFields computed
   return {
     ...field,
     label: resolved.label,
     placeholder: resolved.placeholder,
     helpText: resolved.helpText,
+    disabled: resolved.disabled,
   };
 }
 
@@ -366,6 +371,7 @@ function resolveOptions(field: VormFieldSchema) {
  */
 function renderDefaultInput(fieldName: string) {
   const config = getFieldConfig(fieldName);
+  const resolved = resolvedFields.value[fieldName];
   const value = getValueByPath(vorm.formData, fieldName);
   if (typeof value === "object" && value !== null) return null;
 
@@ -378,7 +384,8 @@ function renderDefaultInput(fieldName: string) {
         ? config.type
         : undefined,
     value,
-    placeholder: resolvedFields.value[fieldName]?.placeholder || undefined,
+    placeholder: resolved?.placeholder || undefined,
+    disabled: resolved?.disabled || undefined,
     onInput: (e: any) =>
       updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
     onBlur: (e: any) => {
