@@ -15,33 +15,33 @@ export const builtInRules: Record<
       value === "" ||
       value === false
     ) {
-      return { message: "This field is required.", params: ["Test"] };
+      return { message: "vorm.validation.required" };
     }
     return null;
   },
   email: (value: any) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(value) ? null : "Invalid email address.";
+    return regex.test(value) ? null : "vorm.validation.email";
   },
   integer: (value: any) => {
-    return Number.isInteger(Number(value)) ? null : "Must be an integer.";
+    return Number.isInteger(Number(value)) ? null : "vorm.validation.integer";
   },
   url: (value: any) => {
-    if (typeof value !== "string") return "Must be a valid URL.";
+    if (typeof value !== "string") return "vorm.validation.url";
 
     try {
       const u = new URL(value);
       return u.protocol === "http:" || u.protocol === "https:"
         ? null
-        : "URL must start with http or https.";
+        : "vorm.validation.url.protocol";
     } catch {
-      return "Must be a valid URL.";
+      return "vorm.validation.url";
     }
   },
   alpha: (value: any) => {
     return typeof value === "string" && /^[A-Za-z]+$/.test(value)
       ? null
-      : "Only letters allowed.";
+      : "vorm.validation.alpha";
   },
 };
 

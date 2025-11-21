@@ -9,7 +9,7 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
 export function matchField(otherFieldName: string): SyncValidatorFn<any> {
   return (value: any, formData: Record<string, any>) => {
     if (value !== formData[otherFieldName]) {
-      return `Must match ${otherFieldName}`;
+      return { message: "vorm.validation.matchField", params: [otherFieldName] };
     }
     return null;
   };

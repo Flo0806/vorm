@@ -1,8 +1,8 @@
 import type { VormFieldSchema } from "../types/schemaTypes";
 import type { ValidationRule } from "../types/validatorTypes";
+import type { ErrorData } from "../types/i18nTypes";
 import {
   builtInRules,
-  formatMessage,
   isBuiltInRule,
   isValidatorFn,
 } from "./ruleUtils.js";
@@ -10,8 +10,8 @@ import {
 export async function validateFieldAsync(
   field: VormFieldSchema,
   formData: Record<string, any>,
-  allErrors: Record<string, string | null>
-): Promise<string | null> {
+  allErrors: Record<string, ErrorData | null>
+): Promise<ErrorData | null> {
   const value = formData[field.name];
   if (!field.validation) {
     allErrors[field.name] = null;
@@ -41,13 +41,13 @@ export async function validateFieldAsync(
  * @param rule
  * @param value
  * @param formData
- * @returns
+ * @returns ErrorData object containing message ref and params for later resolution
  */
 async function applyRuleAsync(
   rule: ValidationRule<any>,
   value: any,
   formData: Record<string, any>
-): Promise<string | null> {
+): Promise<ErrorData | null> {
   const r = rule.rule;
 
   try {
@@ -72,14 +72,20 @@ async function applyRuleAsync(
     const final = result instanceof Promise ? await result : result;
     if (!final) return null;
 
+    // Extract message and params from validator result
     const { message, params } =
       typeof final === "string" ? { message: final, params: undefined } : final;
 
-    return rule.message
-      ? formatMessage(rule.message, params)
-      : formatMessage(message, params);
+    // Return ErrorData - preserve the messageRef (could be ref/computed) for reactive resolution
+    return {
+      messageRef: rule.message || message,
+      params,
+    };
   } catch (error) {
     console.error(`[AutoVorm] Validator threw an error for rule:`, rule, error);
-    return "Validation failed";
+    return {
+      messageRef: "Validation failed",
+      params: undefined,
+    };
   }
 }

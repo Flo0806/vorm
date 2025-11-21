@@ -1,4 +1,5 @@
-import { type ValidationRule } from "./validatorTypes";
+import type { ValidationRule } from "./validatorTypes";
+import type { Ref, ComputedRef } from "vue";
 
 export type ValidationMode = "onInput" | "onBlur" | "onSubmit";
 
@@ -60,7 +61,7 @@ export interface VormFieldSchema<
 > {
   name: string;
   type: T;
-  label?: string;
+  label?: string | Ref<string> | ComputedRef<string>;
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;

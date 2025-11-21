@@ -7,6 +7,6 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
  */
 export function min(minValue: number): SyncValidatorFn<any> {
   return (value: any) => {
-    return Number(value) >= minValue ? null : `Must be at least ${minValue}.`;
+    return Number(value) >= minValue ? null : { message: "vorm.validation.min", params: [minValue] };
   };
 }

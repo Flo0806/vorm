@@ -8,7 +8,7 @@ import type { SyncValidatorFn } from "../types/validatorTypes";
 export function step(stepValue: number): SyncValidatorFn<any> {
   return (value: any) => {
     const n = Number(value);
-    if (isNaN(n)) return "Must be a number.";
-    return n % stepValue === 0 ? null : `Must be a multiple of ${stepValue}.`;
+    if (isNaN(n)) return "vorm.validation.integer";
+    return n % stepValue === 0 ? null : { message: "vorm.validation.step", params: [stepValue] };
   };
 }

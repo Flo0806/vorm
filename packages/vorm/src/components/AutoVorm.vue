@@ -166,7 +166,7 @@ const fieldStates = computed(() =>
   Object.fromEntries(
     visibleFieldNames.value.map((fieldName) => {
       const mode = vorm.getValidationMode(fieldName);
-      const error = vorm.errors[fieldName];
+      const error = vorm.errors.value[fieldName];
       const value = vorm.formData[fieldName];
       const hasValue = value !== "" && value != null;
       const wasValidated = vorm.validatedFields?.[fieldName] === true;
