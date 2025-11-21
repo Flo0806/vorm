@@ -165,6 +165,234 @@ Fields support `showIf` conditions:
 3. Async execution: `validateFieldAsync()` runs validation rules sequentially
 4. Error propagation: `affects` field in rules can propagate errors to other fields
 
+## i18n and Reactivity System
+
+### Overview
+
+Vorm supports comprehensive internationalization (i18n) with reactive labels, placeholders, helpText, and validation messages. The system is designed so that **language changes update displayed text WITHOUT re-triggering validation** on untouched fields.
+
+### ReactiveString Type
+
+The core type that enables reactive text throughout the schema:
+
+```typescript
+type ReactiveString =
+  | string                              // Static: "Username"
+  | Ref<string>                         // Vue Ref: ref('Username')
+  | ComputedRef<string>                 // Vue Computed: computed(() => ...)
+  | (() => string)                      // Function without computed(): () => locale.value === 'en' ? 'Username' : 'Benutzername'
+  | ((ctx: FormContext) => string)      // Function with FormContext: (ctx) => ctx.formData.username ? `${ctx.formData.username}@example.com` : 'email'
+```
+
+**Key Feature**: Users don't need `computed()` wrappers! Simple functions like `() => t('key')` work directly.
+
+### Architecture: Two-Layer Error System
+
+**Problem**: When locale changes, error messages should update, but validation should NOT re-run on untouched fields.
+
+**Solution**: Separate storage from display:
+
+1. **Storage Layer** (`errorData: Record<string, ErrorData | null>`):
+   ```typescript
+   interface ErrorData {
+     messageRef: ReactiveString;        // The reactive message definition
+     params?: (string | number)[];      // Interpolation params (e.g., [8] for "min {0} chars")
+   }
+   ```
+
+2. **Display Layer** (`errors: ComputedRef<Record<string, string | null>>`):
+   ```typescript
+   errors = computed(() => {
+     const result: Record<string, string | null> = {};
+     const formContext = createFormContext();
+
+     for (const fieldName in errorData) {
+       const error = errorData[fieldName];
+       if (!error) {
+         result[fieldName] = null;
+       } else {
+         // Resolve message reactively with FormContext
+         result[fieldName] = resolveMessage(error.messageRef, i18nContext, error.params, formContext);
+       }
+     }
+     return result;
+   });
+   ```
+
+When locale changes → `errors` computed re-runs → messages update → no validation triggered!
+
+### FormContext Pattern
+
+**Problem**: Schema wants to access `vorm.formData` for dynamic text, but `vorm` doesn't exist yet during schema creation (chicken-egg problem).
+
+**Solution**: Pass `FormContext` as function parameter with lazy getters:
+
+```typescript
+interface FormContext {
+  formData: Record<string, any>;
+  // Lazy getters for computed properties (avoids circular dependency)
+  readonly errors: Record<string, string | null>;
+  readonly isValid: boolean;
+  readonly isDirty: boolean;
+  readonly isTouched: boolean;
+  readonly touched: Record<string, boolean>;
+  readonly dirty: Record<string, boolean>;
+}
+
+// In useVorm.ts:
+const createFormContext = (): FormContext => ({
+  formData,
+  get errors() { return errors.value; },      // Evaluated only when accessed!
+  get isValid() { return isValid.value; },
+  get isDirty() { return isDirty.value; },
+  get isTouched() { return isTouched.value; },
+  get touched() { return touched; },
+  get dirty() { return dirty; },
+});
+```
+
+**Performance**: Getters are only evaluated on access → minimal reactivity overhead.
+
+### Usage Examples
+
+```typescript
+const schema: VormSchema = [
+  {
+    name: 'username',
+    // Simple function (no computed needed!)
+    label: () => locale.value === 'en' ? 'Username' : 'Benutzername',
+    placeholder: () => locale.value === 'en' ? 'Enter username' : 'Benutzername eingeben',
+  },
+  {
+    name: 'email',
+    // Dynamic placeholder with FormContext
+    placeholder: (ctx) => ctx.formData.username
+      ? `${ctx.formData.username}@example.com`
+      : 'your@email.com',
+  },
+  {
+    name: 'password',
+    // Dynamic helpText based on form state
+    helpText: (ctx) => ctx.formData.email
+      ? (locale.value === 'en' ? 'Secure password for ' + ctx.formData.email : 'Sicheres Passwort für ' + ctx.formData.email)
+      : (locale.value === 'en' ? 'At least 8 characters' : 'Mindestens 8 Zeichen'),
+    validation: [
+      {
+        rule: minLength(8),  // Uses built-in i18n key
+      },
+    ],
+  },
+  {
+    name: 'age',
+    validation: [{
+      rule: between(18, 100),
+      // Dynamic validation message with FormContext
+      message: (ctx) => (locale.value === 'en'
+        ? `Age must be 18-100 (you entered: ${ctx.formData.age || 'nothing'})`
+        : `Alter muss 18-100 sein (eingegeben: ${ctx.formData.age || 'nichts'})`),
+    }],
+  },
+];
+
+// With Nuxt i18n (no computed wrapper needed!)
+{
+  name: 'username',
+  label: () => t('form.username'),
+  placeholder: () => t('form.username.placeholder'),
+}
+
+// Still works: computed (backward compatible)
+{
+  name: 'username',
+  label: computed(() => t('form.username')),
+}
+
+// Still works: static strings
+{
+  name: 'username',
+  label: "Username",
+}
+```
+
+### Built-in i18n Message Keys
+
+All built-in validators return message keys (not hardcoded strings):
+
+- `vorm.validation.required`
+- `vorm.validation.email`
+- `vorm.validation.minLength` (params: [min])
+- `vorm.validation.maxLength` (params: [max])
+- `vorm.validation.min` (params: [min])
+- `vorm.validation.max` (params: [max])
+- `vorm.validation.between` (params: [min, max])
+- `vorm.validation.step` (params: [step])
+- `vorm.validation.pattern`
+- `vorm.validation.matchField` (params: [fieldName])
+
+Default translations (EN + DE) are in `/packages/vorm/src/i18n/messages.ts`.
+
+### Key Files
+
+**New Files**:
+- `types/contextTypes.ts`: FormContext interface, ReactiveString type
+- `i18n/messages.ts`: Default translations for built-in validators
+- `utils/reactiveResolver.ts`: `resolveReactive()` function for resolving ReactiveString to ComputedRef
+
+**Modified Files**:
+- `types/validatorTypes.ts`: ValidationRule.message is now ReactiveString; added ErrorData interface
+- `types/schemaTypes.ts`: label, placeholder, helpText are now ReactiveString
+- `composables/useVorm.ts`: errors is now ComputedRef (⚠️ BREAKING CHANGE); added FormContext creation; errorData storage layer
+- `i18n/messageResolver.ts`: resolveMessage() accepts FormContext parameter; handles functions
+- `core/ruleUtils.ts`: All built-in rules return message keys
+- `validation/*.ts`: All validators return message keys with params
+- `components/AutoVorm.vue`: resolvedFields computed for reactive label/placeholder/helpText; template uses resolvedFields
+
+### Breaking Changes
+
+#### 1. `vorm.errors` is now ComputedRef
+
+**Before**: `vorm.errors.email`
+**After**: `vorm.errors.value.email`
+
+**Reason**: Required for reactivity without re-validation on language change.
+
+**Migration**: Add `.value` when accessing errors:
+```typescript
+// Before
+if (vorm.errors.email) { ... }
+
+// After
+if (vorm.errors.value.email) { ... }
+```
+
+#### 2. Built-in validation messages are now keys
+
+**Before**: Returns `"This field is required."`
+**After**: Returns `"vorm.validation.required"` → auto-resolved to "This field is required."
+
+**Impact**: Only affects tests that check exact error strings. User-facing code should not be affected.
+
+### Testing Notes
+
+When fixing tests after this feature:
+
+1. **Update error access**: `vorm.errors.email` → `vorm.errors.value.email`
+2. **Update error expectations**: Check for resolved messages or keys (depending on test)
+3. **Update errorData types**: Test mocks using errors need `Record<string, ErrorData | null>` not `Record<string, string | null>`
+
+**Affected test files**:
+- `__tests__/composables/useVorm.test.ts`: Error access patterns
+- `__tests__/core/validatorEngine.test.ts`: ErrorData type in function signatures
+
+### Demo
+
+See `/packages/playground/src/demos/I18nDemo.vue` for a comprehensive example showcasing:
+- Functions without computed()
+- FormContext access in placeholders
+- Dynamic helpText based on form state
+- Dynamic validation messages with entered values
+- Language switching without re-validation
+
 ## Workspace Structure
 
 ```
