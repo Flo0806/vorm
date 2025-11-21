@@ -447,6 +447,21 @@ export function useVorm(
       const error = await validateFieldAsyncInternal(field, formData, errorData);
       errorData[field.name] = error;
       validatedFields[field.name] = true;
+
+      // Cascade re-validation to affected fields when validation passes
+      // This ensures affected fields clear errors that were propagated from this field
+      if (!error) {
+        const affects = compiledAffects.get(fieldName);
+        if (affects?.length) {
+          for (const dep of affects) {
+            const depField = schema.find((f) => f.name === dep);
+            if (depField) {
+              const depError = await validateFieldAsyncInternal(depField, formData, errorData);
+              errorData[dep] = depError;
+            }
+          }
+        }
+      }
     }
   }
 
