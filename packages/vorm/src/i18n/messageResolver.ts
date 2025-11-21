@@ -1,30 +1,44 @@
 import { unref, type Ref } from "vue";
 import type { VormI18n } from "../types/i18nTypes.js";
-import type { ValidationMessage } from "../types/validatorTypes.js";
+import type { ReactiveString, FormContext } from "../types/contextTypes.js";
 import { formatMessage } from "../core/ruleUtils.js";
 import { defaultMessages } from "./messages.js";
 
 /**
  * Resolves a validation message to a plain string
- * Handles: static strings, refs, computed values, and i18n keys
+ * Handles: static strings, refs, computed values, functions, and i18n keys
  *
- * @param messageOrKey - The message (string, ref, computed) or i18n key
+ * @param messageOrKey - The message (string, ref, computed, function) or i18n key
  * @param i18nContext - Optional i18n context for translation
  * @param params - Optional parameters for message interpolation
+ * @param formContext - Optional form context for functions that need access to formData
  * @returns The resolved message string
  */
 export function resolveMessage(
-  messageOrKey: ValidationMessage | undefined,
+  messageOrKey: ReactiveString | undefined,
   i18nContext: VormI18n | undefined,
-  params?: (string | number)[]
+  params?: (string | number)[],
+  formContext?: FormContext
 ): string {
   // No message provided
   if (!messageOrKey) return "";
 
-  // 1. Resolve refs/computed to plain string
-  const resolved = unref(messageOrKey);
+  // 1. Handle functions
+  let resolved: string;
+  if (typeof messageOrKey === "function") {
+    if (formContext && messageOrKey.length > 0) {
+      // Function with FormContext parameter
+      resolved = (messageOrKey as (ctx: FormContext) => string)(formContext);
+    } else {
+      // Function without parameters
+      resolved = (messageOrKey as () => string)();
+    }
+  } else {
+    // 2. Resolve refs/computed to plain string
+    resolved = unref(messageOrKey);
+  }
 
-  // 2. Check if it's an i18n key (starts with 'vorm.')
+  // 3. Check if it's an i18n key (starts with 'vorm.')
   if (resolved.startsWith("vorm.")) {
     // Try custom i18n context first
     if (i18nContext) {
@@ -39,7 +53,7 @@ export function resolveMessage(
     return formatMessage(defaultMessage, params);
   }
 
-  // 3. Regular message (not a key)
+  // 4. Regular message (not a key)
   return formatMessage(resolved, params);
 }
 

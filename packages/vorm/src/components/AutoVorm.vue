@@ -18,6 +18,7 @@ import {
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
 import { updateFieldValue } from "../utils/eventHelper";
+import { resolveReactive } from "../utils/reactiveResolver";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -157,6 +158,28 @@ const visibleFieldNames = computed(() => {
         name.startsWith(`${pattern}[`)
     )
   );
+});
+
+/**
+ * Resolved reactive field properties (label, placeholder, helpText)
+ */
+const resolvedFields = computed(() => {
+  const result: Record<string, { label: string; placeholder: string; helpText: string }> = {};
+
+  for (const fieldName of visibleFieldNames.value) {
+    const field = getFieldConfig(fieldName);
+    const labelComputed = resolveReactive(field.label, vorm);
+    const placeholderComputed = resolveReactive(field.placeholder, vorm);
+    const helpTextComputed = resolveReactive(field.helpText, vorm);
+
+    result[fieldName] = {
+      label: labelComputed.value,
+      placeholder: placeholderComputed.value,
+      helpText: helpTextComputed.value,
+    };
+  }
+
+  return result;
 });
 
 /**
@@ -316,6 +339,7 @@ function renderDefaultInput(fieldName: string) {
         ? config.type
         : undefined,
     value,
+    placeholder: resolvedFields.value[fieldName]?.placeholder || undefined,
     onInput: (e: any) =>
       updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
     onBlur: (e: any) => {
@@ -531,10 +555,17 @@ onMounted(() => {
           {{
             hasDirectOrAncestrySlot(fieldName)
               ? ""
-              : getFieldConfig(fieldName).label
+              : resolvedFields[fieldName].label
           }}
         </label>
         <component :is="renderFieldContent(fieldName)" />
+
+        <p
+          v-if="resolvedFields[fieldName].helpText"
+          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'vorm-help'"
+        >
+          {{ resolvedFields[fieldName].helpText }}
+        </p>
 
         <p
           v-if="

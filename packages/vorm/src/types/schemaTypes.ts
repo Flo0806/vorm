@@ -1,5 +1,5 @@
 import type { ValidationRule } from "./validatorTypes";
-import type { Ref, ComputedRef } from "vue";
+import type { ReactiveString } from "./contextTypes";
 
 export type ValidationMode = "onInput" | "onBlur" | "onSubmit";
 
@@ -61,11 +61,11 @@ export interface VormFieldSchema<
 > {
   name: string;
   type: T;
-  label?: string | Ref<string> | ComputedRef<string>;
-  placeholder?: string;
+  label?: ReactiveString;
+  placeholder?: ReactiveString;
   required?: boolean;
   disabled?: boolean;
-  helpText?: string;
+  helpText?: ReactiveString;
   showError?: boolean;
   showIf?: ShowIfCondition;
   visibility?: (formData: Record<string, any>) => boolean;

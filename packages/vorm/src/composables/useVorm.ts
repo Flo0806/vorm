@@ -1,6 +1,7 @@
 import { reactive, provide, watch, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
 import type { VormSchema, ValidationMode, Option } from "../types/schemaTypes";
 import type { VormI18n, ErrorData } from "../types/i18nTypes";
+import type { FormContext } from "../types/contextTypes";
 import { validateFieldAsync } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
 import {
@@ -82,17 +83,47 @@ export function useVorm(
   const compiledAffects = new Map<string, string[]>();
   const fieldOptionsMap = reactive<Record<string, Option[]>>({});
 
+  // Forward declaration for errors (will be defined below)
+  let errors: ComputedRef<Record<string, string | null>>;
+  let isValid: ComputedRef<boolean>;
+  let isDirty: ComputedRef<boolean>;
+  let isTouched: ComputedRef<boolean>;
+
+  // Create FormContext for reactive functions - using lazy getters
+  const createFormContext = (): FormContext => ({
+    formData,
+    get errors() {
+      return errors.value;
+    },
+    get isValid() {
+      return isValid.value;
+    },
+    get isDirty() {
+      return isDirty.value;
+    },
+    get isTouched() {
+      return isTouched.value;
+    },
+    get touched() {
+      return touched;
+    },
+    get dirty() {
+      return dirty;
+    },
+  });
+
   // Computed error messages - resolves ErrorData to strings reactively
-  const errors = computed(() => {
+  errors = computed(() => {
     const result: Record<string, string | null> = {};
+    const formContext = createFormContext();
 
     for (const fieldName in errorData) {
       const error = errorData[fieldName];
       if (!error) {
         result[fieldName] = null;
       } else {
-        // Resolve message reactively using unref() in resolveMessage
-        result[fieldName] = resolveMessage(error.messageRef, i18nContext, error.params);
+        // Resolve message reactively with form context
+        result[fieldName] = resolveMessage(error.messageRef, i18nContext, error.params, formContext);
       }
     }
 
@@ -100,7 +131,7 @@ export function useVorm(
   });
 
   // Computed form-level flags for better DX
-  const isValid = computed(() => {
+  isValid = computed(() => {
     const errorValues = Object.values(errors.value);
     const validatedValues = Object.values(validatedFields);
     // Form is only valid if:
@@ -113,8 +144,8 @@ export function useVorm(
       errorValues.every(e => e === null)
     );
   });
-  const isDirty = computed(() => Object.values(dirty).some(d => d === true));
-  const isTouched = computed(() => Object.values(touched).some(t => t === true));
+  isDirty = computed(() => Object.values(dirty).some(d => d === true));
+  isTouched = computed(() => Object.values(touched).some(t => t === true));
 
   schema.forEach((field) => {
     const name = field.name;
