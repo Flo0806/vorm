@@ -162,6 +162,7 @@ const visibleFieldNames = computed(() => {
 
 /**
  * Resolved reactive field properties (label, placeholder, helpText)
+ * Returns plain strings, but computed updates on reactive changes
  */
 const resolvedFields = computed(() => {
   const result: Record<string, { label: string; placeholder: string; helpText: string }> = {};
@@ -189,7 +190,7 @@ const fieldStates = computed(() =>
   Object.fromEntries(
     visibleFieldNames.value.map((fieldName) => {
       const mode = vorm.getValidationMode(fieldName);
-      const error = vorm.errors.value[fieldName];
+      const error = vorm.errors[fieldName];
       const value = vorm.formData[fieldName];
       const hasValue = value !== "" && value != null;
       const wasValidated = vorm.validatedFields?.[fieldName] === true;
@@ -282,6 +283,43 @@ function getFieldConfig(name: string): VormFieldSchema {
     type: "text",
     label: "",
     showError: true,
+  };
+}
+
+/**
+ * Field schema with resolved reactive strings for direct template use
+ * Plain strings are returned, but remain reactive through computed dependencies
+ */
+type ResolvedVormFieldSchema = Omit<VormFieldSchema, 'label' | 'placeholder' | 'helpText'> & {
+  label?: string;
+  placeholder?: string;
+  helpText?: string;
+};
+
+/**
+ * Returns the field config with resolved reactive strings for template use
+ * Returns plain strings that update reactively through computed dependencies
+ */
+function getResolvedFieldConfig(name: string): ResolvedVormFieldSchema {
+  const field = getFieldConfig(name);
+  const resolved = resolvedFields.value[name];
+
+  if (!resolved) {
+    // If no resolved values, convert to strings for type safety
+    return {
+      ...field,
+      label: typeof field.label === 'string' ? field.label : '',
+      placeholder: typeof field.placeholder === 'string' ? field.placeholder : '',
+      helpText: typeof field.helpText === 'string' ? field.helpText : '',
+    };
+  }
+
+  // Return plain strings - reactivity maintained through resolvedFields computed
+  return {
+    ...field,
+    label: resolved.label,
+    placeholder: resolved.placeholder,
+    helpText: resolved.helpText,
   };
 }
 
@@ -381,7 +419,7 @@ function renderDefaultInput(fieldName: string) {
  * Renders slot or input content
  */
 function renderFieldContent(fieldName: string) {
-  const field = getFieldConfig(fieldName);
+  const field = getResolvedFieldConfig(fieldName);
   if (slots[fieldName]) {
     return h(
       "div",
@@ -506,7 +544,7 @@ onMounted(() => {
         v-if="hasSlot(`wrapper:${fieldName}`)"
         :name="`wrapper:${fieldName}`"
         :slotName="`wrapper:${fieldName}`"
-        :field="getFieldConfig(fieldName)"
+        :field="getResolvedFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
@@ -517,7 +555,7 @@ onMounted(() => {
         v-else-if="hasSlotMatchingWrapperMulti(fieldName)"
         :name="getWrapperSlotName(fieldName)"
         :slotName="`wrapper:${fieldName}`"
-        :field="getFieldConfig(fieldName)"
+        :field="getResolvedFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"
@@ -528,7 +566,7 @@ onMounted(() => {
         v-else-if="hasSlot('wrapper')"
         name="wrapper"
         slotName="wrapper"
-        :field="getFieldConfig(fieldName)"
+        :field="getResolvedFieldConfig(fieldName)"
         :state="fieldStates[fieldName]"
         :content="() => renderFieldContent(fieldName)"
         :indexes="extractRepeaterIndexes(fieldName)"

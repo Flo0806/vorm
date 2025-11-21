@@ -39,7 +39,23 @@
     </div>
 
     <VormProvider>
-      <AutoVorm as="form" @submit="handleSubmit" layout="stacked" />
+      <AutoVorm as="form" @submit="handleSubmit" layout="stacked">
+        <!-- Test custom template with field.label (should be string, not Ref) -->
+        <template #email="{ field, state }">
+          <div class="custom-field-wrapper">
+            <label :for="field.name">{{ field.label }}</label>
+            <input
+              v-model="vorm.formData.email"
+              :placeholder="field.placeholder"
+              :name="field.name"
+              :class="{ 'error-border': state.error }"
+              style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px"
+            />
+            <p v-if="state.error" style="color: red; font-size: 0.875rem">{{ state.error }}</p>
+            <p v-if="field.helpText" style="color: #666; font-size: 0.875rem">{{ field.helpText }}</p>
+          </div>
+        </template>
+      </AutoVorm>
     </VormProvider>
 
     <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 8px">

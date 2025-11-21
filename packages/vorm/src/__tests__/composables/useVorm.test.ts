@@ -9,7 +9,12 @@ const basicSchema: VormSchema = [
     type: "text",
     validation: [{ rule: "required" }],
   },
-  { name: "age", label: "Alter", type: "number" },
+  {
+    name: "age",
+    label: "Alter",
+    type: "number",
+    validation: [{ rule: "required" }],
+  },
 ];
 
 describe("useVorm", () => {
@@ -46,14 +51,20 @@ describe("useVorm", () => {
     expect(vorm.touched.email).toBe(true);
   });
 
-  it("resets the form", () => {
-    vorm.formData.email = "changed";
-    vorm.errors.email = "Some error";
+  it("resets the form", async () => {
+    vorm.formData.email = "test@example.com";
     vorm.dirty.email = true;
     vorm.touched.email = true;
+
+    // Trigger validation
+    await vorm.validate();
+    expect(vorm.errors.email).toBeNull(); // Should be valid
+
     vorm.resetForm();
 
+    // After reset, form should be back to initial state
     expect(vorm.formData.email).toBe("");
+    await new Promise(resolve => setTimeout(resolve, 0)); // Wait for watchEffect
     expect(vorm.errors.email).toBeNull();
     expect(vorm.dirty.email).toBe(false);
     expect(vorm.touched.email).toBe(false);

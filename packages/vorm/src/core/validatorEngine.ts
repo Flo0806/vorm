@@ -6,8 +6,13 @@ import {
   isBuiltInRule,
   isValidatorFn,
 } from "./ruleUtils.js";
+import { resolveMessage } from "../i18n/messageResolver.js";
 
-export async function validateFieldAsync(
+/**
+ * Internal validation function that returns ErrorData for reactive error messages
+ * Used internally by useVorm to maintain reactive error state
+ */
+export async function validateFieldAsyncInternal(
   field: VormFieldSchema,
   formData: Record<string, any>,
   allErrors: Record<string, ErrorData | null>
@@ -28,6 +33,41 @@ export async function validateFieldAsync(
         });
       }
       return result;
+    }
+  }
+
+  // ✅ No error: clear all
+  allErrors[field.name] = null;
+  return null;
+}
+
+/**
+ * Public validation function that returns resolved error strings (backward compatible)
+ * @deprecated Internal use - prefer using vorm.validateFieldByName() from useVorm context
+ */
+export async function validateFieldAsync(
+  field: VormFieldSchema,
+  formData: Record<string, any>,
+  allErrors: Record<string, string | null>
+): Promise<string | null> {
+  const value = formData[field.name];
+  if (!field.validation) {
+    allErrors[field.name] = null;
+    return null;
+  }
+
+  for (const rule of field.validation) {
+    const result = await applyRuleAsync(rule, value, formData);
+    if (result) {
+      // Resolve ErrorData to string for backward compatibility
+      const errorString = resolveMessage(result.messageRef, undefined, result.params);
+      allErrors[field.name] = errorString;
+      if (rule.affects) {
+        rule.affects.forEach((affectedField) => {
+          allErrors[affectedField] = errorString;
+        });
+      }
+      return errorString;
     }
   }
 

@@ -27,7 +27,7 @@ export function resolveReactive(
         const ctx: FormContext = {
           formData: vormContext.formData,
           get errors() {
-            return vormContext.errors.value;
+            return vormContext.errors;
           },
           get isValid() {
             return vormContext.isValid.value;
@@ -78,7 +78,7 @@ export function resolveReactiveOnce(
       const ctx: FormContext = {
         formData: vormContext.formData,
         get errors() {
-          return vormContext.errors.value;
+          return vormContext.errors;
         },
         get isValid() {
           return vormContext.isValid.value;

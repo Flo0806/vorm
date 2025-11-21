@@ -1,8 +1,8 @@
-import { reactive, provide, watch, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
+import { reactive, provide, watch, watchEffect, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
 import type { VormSchema, ValidationMode, Option } from "../types/schemaTypes";
 import type { VormI18n, ErrorData } from "../types/i18nTypes";
 import type { FormContext } from "../types/contextTypes";
-import { validateFieldAsync } from "../core/validatorEngine";
+import { validateFieldAsyncInternal } from "../core/validatorEngine";
 import { VormContextKey } from "../core/vormContext";
 import {
   compileField,
@@ -15,7 +15,7 @@ import { resolveMessage } from "../i18n/messageResolver.js";
 export interface VormContext {
   schema: VormSchema;
   formData: Record<string, any>;
-  errors: ComputedRef<Record<string, string | null>>;
+  errors: Record<string, string | null>;
   validatedFields: Record<string, boolean>;
   touched: Record<string, boolean>;
   dirty: Record<string, boolean>;
@@ -83,8 +83,10 @@ export function useVorm(
   const compiledAffects = new Map<string, string[]>();
   const fieldOptionsMap = reactive<Record<string, Option[]>>({});
 
-  // Forward declaration for errors (will be defined below)
-  let errors: ComputedRef<Record<string, string | null>>;
+  // Reactive errors object - updated by watchEffect when errorData or i18n changes
+  const errors = reactive<Record<string, string | null>>({});
+
+  // Forward declaration for computed flags
   let isValid: ComputedRef<boolean>;
   let isDirty: ComputedRef<boolean>;
   let isTouched: ComputedRef<boolean>;
@@ -93,7 +95,7 @@ export function useVorm(
   const createFormContext = (): FormContext => ({
     formData,
     get errors() {
-      return errors.value;
+      return errors;
     },
     get isValid() {
       return isValid.value;
@@ -112,27 +114,32 @@ export function useVorm(
     },
   });
 
-  // Computed error messages - resolves ErrorData to strings reactively
-  errors = computed(() => {
-    const result: Record<string, string | null> = {};
+  // Watch errorData and update errors reactively - resolves ErrorData to strings
+  watchEffect(() => {
     const formContext = createFormContext();
 
-    for (const fieldName in errorData) {
-      const error = errorData[fieldName];
-      if (!error) {
-        result[fieldName] = null;
-      } else {
-        // Resolve message reactively with form context
-        result[fieldName] = resolveMessage(error.messageRef, i18nContext, error.params, formContext);
+    // Remove keys that are no longer in errorData
+    for (const key in errors) {
+      if (!(key in errorData)) {
+        delete errors[key];
       }
     }
 
-    return result;
+    // Update/add keys from errorData
+    for (const fieldName in errorData) {
+      const error = errorData[fieldName];
+      if (!error) {
+        errors[fieldName] = null;
+      } else {
+        // Resolve message reactively with form context
+        errors[fieldName] = resolveMessage(error.messageRef, i18nContext, error.params, formContext);
+      }
+    }
   });
 
   // Computed form-level flags for better DX
   isValid = computed(() => {
-    const errorValues = Object.values(errors.value);
+    const errorValues = Object.values(errors);
     const validatedValues = Object.values(validatedFields);
     // Form is only valid if:
     // 1. It has fields
@@ -426,7 +433,7 @@ export function useVorm(
     const field = schema.find((f) => f.name === fieldName);
     if (field) {
       touched[field.name] = true;
-      const error = await validateFieldAsync(field, formData, errorData);
+      const error = await validateFieldAsyncInternal(field, formData, errorData);
       errorData[field.name] = error;
       validatedFields[field.name] = true;
     }
@@ -477,7 +484,7 @@ export function useVorm(
    * @returns The current errors
    */
   function getErrors() {
-    return { ...errors.value };
+    return { ...errors };
   }
 
   /**

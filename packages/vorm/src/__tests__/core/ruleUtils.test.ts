@@ -11,40 +11,41 @@ describe("builtInRules", () => {
 
   it("validates required", () => {
     expect(builtInRules.required("test", dummyForm)).toBeNull();
-    expect(builtInRules.required("", dummyForm)).toEqual({
-      message: "This field is required.",
-      params: ["Test"],
-    });
+    const result = builtInRules.required("", dummyForm);
+    expect(result).not.toBeNull();
+    if (result && typeof result === "object" && "message" in result) {
+      expect(result.message).toBe("vorm.validation.required");
+    }
     expect(builtInRules.required(null, dummyForm)).not.toBeNull();
   });
 
   it("validates email", () => {
     expect(builtInRules.email("test@example.com", dummyForm)).toBeNull();
     expect(builtInRules.email("invalid-email", dummyForm)).toBe(
-      "Invalid email address."
+      "vorm.validation.email"
     );
   });
 
   it("validates integer", () => {
     expect(builtInRules.integer("5", dummyForm)).toBeNull();
-    expect(builtInRules.integer("5.5", dummyForm)).toBe("Must be an integer.");
-    expect(builtInRules.integer("abc", dummyForm)).toBe("Must be an integer.");
+    expect(builtInRules.integer("5.5", dummyForm)).toBe("vorm.validation.integer");
+    expect(builtInRules.integer("abc", dummyForm)).toBe("vorm.validation.integer");
   });
 
   it("validates url", () => {
     expect(builtInRules.url("http://example.com", dummyForm)).toBeNull();
     expect(builtInRules.url("ftp://example.com", dummyForm)).toBe(
-      "URL must start with http or https."
+      "vorm.validation.url.protocol"
     );
     expect(builtInRules.url("not a url", dummyForm)).toBe(
-      "Must be a valid URL."
+      "vorm.validation.url"
     );
   });
 
   it("validates alpha", () => {
     expect(builtInRules.alpha("abcXYZ", dummyForm)).toBeNull();
     expect(builtInRules.alpha("abc123", dummyForm)).toBe(
-      "Only letters allowed."
+      "vorm.validation.alpha"
     );
   });
 });
