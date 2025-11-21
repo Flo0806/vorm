@@ -1,5 +1,11 @@
 # vorm-nuxt
 
+## 1.2.1
+
+### Patch Changes
+
+- [#43](https://github.com/Flo0806/vorm/pull/43) [`08035b1`](https://github.com/Flo0806/vorm/commit/08035b1cc81c84dbdd6f496454b531a5ef48cd0a) Thanks [@Flo0806](https://github.com/Flo0806)! - Fix version display: read version dynamically from package.json instead of hardcoded value
+
 ## 1.2.0
 
 ### Minor Changes
