@@ -15,6 +15,7 @@ import PlaygroundRealWorld from "./demos/PlaygroundRealWorld.vue";
 import MinMaxTestDemo from "./demos/MinMaxTestDemo.vue";
 import FieldOptionsBugTest from "./demos/FieldOptionsBugTest.vue";
 import FormStateDemo from "./demos/FormStateDemo.vue";
+import I18nDemo from "./demos/I18nDemo.vue";
 
 const routes = [
   {
@@ -92,6 +93,11 @@ const routes = [
     path: "/form-state",
     component: FormStateDemo,
     name: "FormStateDemo",
+  },
+  {
+    path: "/i18n",
+    component: I18nDemo,
+    name: "I18nDemo",
   },
 ];
 
