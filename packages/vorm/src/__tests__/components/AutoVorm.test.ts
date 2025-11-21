@@ -4,7 +4,7 @@ import AutoVorm from "../../components/AutoVorm.vue";
 
 import { describe, expect, it } from "vitest";
 import { VormContextKey } from "../../core/vormContext";
-import { defineComponent, h, type Slots } from "vue";
+import { defineComponent, h, computed } from "vue";
 
 const schema = [
   { name: "email", type: "text", label: "E-Mail" },
@@ -46,6 +46,16 @@ function createMockVormContext() {
     getTouched: () => ({}),
     getDirty: () => ({}),
     validate: () => {},
+    fieldOptionsMap: {},
+    getFieldOptions: (fieldName: string) => computed(() => []),
+    bindField: (fieldName: string) => computed(() => ({
+      modelValue: context.formData[fieldName],
+      'onUpdate:modelValue': () => {},
+      items: [],
+      options: [],
+      error: context.errors[fieldName] || undefined,
+      errorMessages: context.errors[fieldName] ? [context.errors[fieldName]] : [],
+    })),
   };
 
   return context;
@@ -126,5 +136,194 @@ describe("AutoVorm", () => {
     });
 
     expect(wrapper.text()).toContain("E-Mail ist erforderlich");
+  });
+
+  describe("slot bindings", () => {
+    it("wrapper slot receives modelValue, items, options from bindField", () => {
+      const schemaWithOptions = [
+        {
+          name: "country",
+          type: "select",
+          label: "Country",
+          options: [
+            { label: "Germany", value: "DE" },
+            { label: "USA", value: "US" },
+          ],
+        },
+      ];
+
+      const context: any = {
+        schema: schemaWithOptions,
+        formData: { country: "DE" },
+        errors: { country: null },
+        validatedFields: { country: false },
+        touched: { country: false },
+        dirty: { country: false },
+        initial: { country: "" },
+        getValidationMode: () => "onSubmit",
+        validateFieldByName: () => {},
+        resetForm: () => {},
+        touchAll: () => {},
+        getErrors: () => ({}),
+        getTouched: () => ({}),
+        getDirty: () => ({}),
+        validate: () => {},
+        fieldOptionsMap: {},
+        getFieldOptions: () => computed(() => [
+          { label: "Germany", value: "DE" },
+          { label: "USA", value: "US" },
+        ]),
+        bindField: () => computed(() => ({
+          modelValue: "DE",
+          'onUpdate:modelValue': () => {},
+          items: [
+            { label: "Germany", value: "DE" },
+            { label: "USA", value: "US" },
+          ],
+          options: [
+            { label: "Germany", value: "DE" },
+            { label: "USA", value: "US" },
+          ],
+          error: undefined,
+          errorMessages: [],
+        })),
+      };
+
+      let receivedProps: any = null;
+
+      const wrapper = mount(AutoVorm, {
+        global: {
+          provide: { [VormContextKey]: context },
+        },
+        slots: {
+          "wrapper:country": (props: any) => {
+            receivedProps = props;
+            return h("div", { class: "custom-select" }, "Custom");
+          },
+        },
+      });
+
+      expect(wrapper.find(".custom-select").exists()).toBe(true);
+      expect(receivedProps).not.toBeNull();
+      expect(receivedProps.modelValue).toBe("DE");
+      expect(receivedProps.items).toHaveLength(2);
+      expect(receivedProps.options).toHaveLength(2);
+      expect(receivedProps.error).toBeUndefined();
+      expect(receivedProps.errorMessages).toEqual([]);
+    });
+
+    it("wrapper slot receives error and errorMessages when field has error", () => {
+      const schemaWithValidation = [
+        {
+          name: "email",
+          type: "text",
+          label: "Email",
+        },
+      ];
+
+      const context: any = {
+        schema: schemaWithValidation,
+        formData: { email: "" },
+        errors: { email: "Email is required" },
+        validatedFields: { email: true },
+        touched: { email: true },
+        dirty: { email: false },
+        initial: { email: "" },
+        getValidationMode: () => "onSubmit",
+        validateFieldByName: () => {},
+        resetForm: () => {},
+        touchAll: () => {},
+        getErrors: () => ({}),
+        getTouched: () => ({}),
+        getDirty: () => ({}),
+        validate: () => {},
+        fieldOptionsMap: {},
+        getFieldOptions: () => computed(() => []),
+        bindField: () => computed(() => ({
+          modelValue: "",
+          'onUpdate:modelValue': () => {},
+          items: [],
+          options: [],
+          error: "Email is required",
+          errorMessages: ["Email is required"],
+        })),
+      };
+
+      let receivedProps: any = null;
+
+      mount(AutoVorm, {
+        global: {
+          provide: { [VormContextKey]: context },
+        },
+        slots: {
+          "wrapper:email": (props: any) => {
+            receivedProps = props;
+            return h("div", "Custom");
+          },
+        },
+      });
+
+      expect(receivedProps).not.toBeNull();
+      expect(receivedProps.error).toBe("Email is required");
+      expect(receivedProps.errorMessages).toEqual(["Email is required"]);
+    });
+
+    it("wrapper slot receives onUpdate:modelValue handler", () => {
+      let updateCalled = false;
+      let updateValue: any = null;
+
+      const context: any = {
+        schema: [{ name: "test", type: "text", label: "Test" }],
+        formData: { test: "" },
+        errors: { test: null },
+        validatedFields: { test: false },
+        touched: { test: false },
+        dirty: { test: false },
+        initial: { test: "" },
+        getValidationMode: () => "onSubmit",
+        validateFieldByName: () => {},
+        resetForm: () => {},
+        touchAll: () => {},
+        getErrors: () => ({}),
+        getTouched: () => ({}),
+        getDirty: () => ({}),
+        validate: () => {},
+        fieldOptionsMap: {},
+        getFieldOptions: () => computed(() => []),
+        bindField: () => computed(() => ({
+          modelValue: "",
+          'onUpdate:modelValue': (value: any) => {
+            updateCalled = true;
+            updateValue = value;
+          },
+          items: [],
+          options: [],
+          error: undefined,
+          errorMessages: [],
+        })),
+      };
+
+      let receivedProps: any = null;
+
+      mount(AutoVorm, {
+        global: {
+          provide: { [VormContextKey]: context },
+        },
+        slots: {
+          "wrapper:test": (props: any) => {
+            receivedProps = props;
+            return h("div", "Custom");
+          },
+        },
+      });
+
+      expect(receivedProps).not.toBeNull();
+      expect(typeof receivedProps["onUpdate:modelValue"]).toBe("function");
+
+      // Call the handler
+      receivedProps["onUpdate:modelValue"]("new value");
+      expect(updateCalled).toBe(true);
+      expect(updateValue).toBe("new value");
+    });
   });
 });

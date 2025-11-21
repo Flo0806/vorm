@@ -1,3 +1,4 @@
+import type { Ref, ComputedRef } from "vue";
 import type { ValidationRule } from "./validatorTypes";
 import type { ReactiveString } from "./contextTypes";
 
@@ -9,7 +10,21 @@ export type Option =
       label: string;
       value: string | number;
       disabled?: boolean;
+      // Allow custom data (icon, color, metadata, etc.)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key: string]: any;
     };
+
+/**
+ * Reactive options for select, radio, autocomplete fields
+ * Supports static arrays, reactive refs/computed, functions, and async functions
+ */
+export type ReactiveOptions =
+  | Option[]
+  | Ref<Option[]>
+  | ComputedRef<Option[]>
+  | (() => Option[])
+  | (() => Promise<Option[]>);
 
 export type ShowIfCondition =
   | Record<string, any>
@@ -79,6 +94,12 @@ export interface VormFieldSchema<
     help?: string;
   };
   fields?: VormSchema;
+
+  /**
+   * Options for select, radio, autocomplete fields
+   * Can be static array, reactive ref/computed, function, or async function
+   */
+  options?: ReactiveOptions;
 }
 
 /**
