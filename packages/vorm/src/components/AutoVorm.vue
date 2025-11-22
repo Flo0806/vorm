@@ -1,24 +1,28 @@
 <script setup lang="ts">
+/**
+ * AutoVorm - Automatic form rendering from schema
+ *
+ * Uses VormField internally for isolated reactivity per field.
+ * Each field is a separate component, so only the changed field re-renders.
+ */
 import {
   computed,
   useSlots,
   onMounted,
-  h,
   type StyleValue,
   getCurrentInstance,
   inject,
 } from "vue";
 import { useVormContext } from "../composables/useVormContext";
-import type { FieldState, VormFieldSchema } from "../types/schemaTypes";
+import type { VormFieldSchema } from "../types/schemaTypes";
 import { expandSchema } from "../utils/expandSchema";
-import { getValueByPath, extractRepeaterIndexes } from "../utils/pathHelpers";
+import { getValueByPath } from "../utils/pathHelpers";
 import {
   getAncestryNames,
   normalizeFieldName,
   slotFieldMatchesPattern,
 } from "../utils/slotMatcher";
-import { updateFieldValue } from "../utils/eventHelper";
-import { resolveReactive, resolveReactiveBoolean } from "../utils/reactiveResolver";
+import VormField from "./VormField.vue";
 
 const register = inject<(meta: { as?: string }) => void>(
   "registerVorm",
@@ -60,12 +64,11 @@ const defaultGridClass = computed(() => {
   if (props.layout === "stacked") {
     return "vorm-stacked";
   }
-  return "vorm-container"; // fallback
+  return "vorm-container";
 });
 
-/**
- * Retrieves a nested schema from a given path
- */
+// ============ SCHEMA HELPERS ============
+
 function getSubSchemaAt(
   schema: VormFieldSchema[],
   path: string
@@ -82,9 +85,6 @@ function getSubSchemaAt(
   return current;
 }
 
-/**
- * Collects all repeater paths from the schema recursively
- */
 function collectRepeaterPaths(schema: VormFieldSchema[], path = ""): string[] {
   const paths: string[] = [];
   for (const field of schema) {
@@ -100,9 +100,51 @@ function collectRepeaterPaths(schema: VormFieldSchema[], path = ""): string[] {
   return paths;
 }
 
-/**
- * Resolves visible field names, respecting exclusion and only rules
- */
+function resolveRelativePath(basePath: string, relative: string): string {
+  const baseParts = basePath.split(/(?=\[)|\./).filter(Boolean);
+  baseParts.pop();
+  const relativeParts = relative.split("/").filter(Boolean);
+
+  const stack: string[] = [];
+  for (const part of relativeParts) {
+    if (part === "..") {
+      const last = baseParts.pop();
+      if (last?.startsWith("[") && baseParts.length) {
+        baseParts.pop();
+      }
+    } else if (part !== ".") {
+      stack.push(part);
+    }
+  }
+
+  return [...baseParts, ...stack].reduce(
+    (acc, part) =>
+      acc + (part.startsWith("[") ? part : (acc ? "." : "") + part),
+    ""
+  );
+}
+
+function getFieldConfig(name: string): VormFieldSchema {
+  const exact = expandSchema(vorm.schema, vorm.formData).find(
+    (f) => f.name === name
+  );
+  if (exact) return exact;
+
+  const rawValue = getValueByPath(vorm.formData, name);
+  if (Array.isArray(rawValue)) {
+    return {
+      name,
+      type: "repeater",
+      label: name.split(".").pop() ?? "",
+      fields: [],
+    };
+  }
+
+  return { name, type: "text", label: "", showError: true };
+}
+
+// ============ VISIBLE FIELD NAMES ============
+
 const visibleFieldNames = computed(() => {
   const schemaSegment = basePath.value
     ? getSubSchemaAt(vorm.schema, basePath.value)
@@ -141,14 +183,15 @@ const visibleFieldNames = computed(() => {
         return condition.condition(value, vorm.formData, path);
       }
 
-      // Default: match key/value pairs
       return Object.entries(condition).every(
         ([key, val]) => vorm.formData[key] === val
       );
     })
     .map((f) => f.name);
 
-  if (!props.only || props.only.length === 0) return allFields;
+  if (!props.only || props.only.length === 0) {
+    return allFields;
+  }
 
   return allFields.filter((name) =>
     props.only!.some(
@@ -160,306 +203,8 @@ const visibleFieldNames = computed(() => {
   );
 });
 
-/**
- * Resolved reactive field properties (label, placeholder, helpText, disabled)
- * Returns plain values, but computed updates on reactive changes
- */
-const resolvedFields = computed(() => {
-  const result: Record<string, { label: string; placeholder: string; helpText: string; disabled: boolean }> = {};
+// ============ SLOT HELPERS ============
 
-  for (const fieldName of visibleFieldNames.value) {
-    const field = getFieldConfig(fieldName);
-    const labelComputed = resolveReactive(field.label, vorm);
-    const placeholderComputed = resolveReactive(field.placeholder, vorm);
-    const helpTextComputed = resolveReactive(field.helpText, vorm);
-    const disabledComputed = resolveReactiveBoolean(field.disabled, vorm);
-
-    result[fieldName] = {
-      label: labelComputed.value,
-      placeholder: placeholderComputed.value,
-      helpText: helpTextComputed.value,
-      disabled: disabledComputed.value,
-    };
-  }
-
-  return result;
-});
-
-/**
- * Builds up field states for each visible field
- */
-const fieldStates = computed(() =>
-  Object.fromEntries(
-    visibleFieldNames.value.map((fieldName) => {
-      const mode = vorm.getValidationMode(fieldName);
-      const error = vorm.errors[fieldName];
-      const value = vorm.formData[fieldName];
-      const hasValue = value !== "" && value != null;
-      const wasValidated = vorm.validatedFields?.[fieldName] === true;
-      const touched = vorm.touched?.[fieldName] === true;
-      const dirty = vorm.dirty?.[fieldName] === true;
-      const initial = vorm.initial?.[fieldName];
-
-      const state: FieldState = {
-        error,
-        valid: !error && hasValue && wasValidated,
-        invalid: !!error && wasValidated,
-        validationMode: mode,
-        touched,
-        dirty,
-        initialValue: initial,
-        classes: [
-          wasValidated && error ? props.errorClass : "",
-          wasValidated && !error && hasValue ? "vorm-valid" : "",
-          touched ? "vorm-touched" : "",
-          dirty ? "vorm-dirty" : "",
-        ]
-          .filter(Boolean)
-          .join(" "),
-      };
-
-      return [fieldName, state];
-    })
-  )
-);
-
-/**
- * Resolves a relative path based on a base path and a relative path
- * @param basePath
- * @param relative
- */
-function resolveRelativePath(basePath: string, relative: string): string {
-  const baseParts = basePath.split(/(?=\[)|\./).filter(Boolean);
-  baseParts.pop(); // Remove last part, because it is the field name
-  const relativeParts = relative.split("/").filter(Boolean);
-  console.log(baseParts);
-
-  const stack: string[] = [];
-
-  for (const part of relativeParts) {
-    if (part === "..") {
-      const last = baseParts.pop();
-      if (last?.startsWith("[") && baseParts.length) {
-        baseParts.pop();
-      }
-    } else if (part !== ".") {
-      stack.push(part); // Neuen Teil anhängen
-    }
-  }
-  console.log(
-    "done",
-    [...baseParts, ...stack].reduce(
-      (acc, part) =>
-        acc + (part.startsWith("[") ? part : (acc ? "." : "") + part),
-      ""
-    )
-  );
-  return [...baseParts, ...stack].reduce(
-    (acc, part) =>
-      acc + (part.startsWith("[") ? part : (acc ? "." : "") + part),
-    ""
-  );
-}
-
-/**
- * Returns the field config for the given field name
- */
-function getFieldConfig(name: string): VormFieldSchema {
-  const exact = expandSchema(vorm.schema, vorm.formData).find(
-    (f) => f.name === name
-  );
-  if (exact) return exact;
-
-  const rawValue = getValueByPath(vorm.formData, name);
-  if (Array.isArray(rawValue)) {
-    return {
-      name,
-      type: "repeater",
-      label: name.split(".").pop() ?? "",
-      fields: [],
-    };
-  }
-
-  return {
-    name,
-    type: "text",
-    label: "",
-    showError: true,
-  };
-}
-
-/**
- * Field schema with resolved reactive values for direct template use
- * Plain values are returned, but remain reactive through computed dependencies
- */
-type ResolvedVormFieldSchema = Omit<VormFieldSchema, 'label' | 'placeholder' | 'helpText' | 'disabled'> & {
-  label?: string;
-  placeholder?: string;
-  helpText?: string;
-  disabled?: boolean;
-};
-
-/**
- * Returns the field config with resolved reactive values for template use
- * Returns plain values that update reactively through computed dependencies
- */
-function getResolvedFieldConfig(name: string): ResolvedVormFieldSchema {
-  const field = getFieldConfig(name);
-  const resolved = resolvedFields.value[name];
-
-  if (!resolved) {
-    // If no resolved values, convert to plain values for type safety
-    return {
-      ...field,
-      label: typeof field.label === 'string' ? field.label : '',
-      placeholder: typeof field.placeholder === 'string' ? field.placeholder : '',
-      helpText: typeof field.helpText === 'string' ? field.helpText : '',
-      disabled: typeof field.disabled === 'boolean' ? field.disabled : false,
-    };
-  }
-
-  // Return plain values - reactivity maintained through resolvedFields computed
-  return {
-    ...field,
-    label: resolved.label,
-    placeholder: resolved.placeholder,
-    helpText: resolved.helpText,
-    disabled: resolved.disabled,
-  };
-}
-
-/**
- * Emits synthetic input/blur/validate events
- */
-function emitFieldEvent(
-  type: "input" | "blur" | "validate",
-  name: string,
-  value: any,
-  originalEvent?: Event
-) {
-  let prevented = false;
-  const payload = {
-    name,
-    value,
-    originalEvent,
-    field: getFieldConfig(name),
-    preventDefault: () => {
-      prevented = true;
-    },
-  };
-  if (type === "input") emit("input", payload);
-  else if (type === "blur") emit("blur", payload);
-  else if (type === "validate") emit("validate", payload);
-  return !prevented;
-}
-
-/**
- * Resolves field options from schema or fieldOptionsMap
- */
-function resolveOptions(field: VormFieldSchema) {
-  // Get options from getFieldOptions (handles both schema.options and fieldOptionsMap)
-  const options = vorm.getFieldOptions(field.name).value;
-  if (!options || options.length === 0) return [];
-
-  return options.map((opt) =>
-    typeof opt === "string" ? { label: opt, value: opt } : opt
-  );
-}
-
-/**
- * Default renderer for native inputs
- */
-function renderDefaultInput(fieldName: string) {
-  const config = getFieldConfig(fieldName);
-  const resolved = resolvedFields.value[fieldName];
-  const value = getValueByPath(vorm.formData, fieldName);
-  if (typeof value === "object" && value !== null) return null;
-
-  const inputProps = {
-    id: `vorm-${fieldName}`,
-    name: fieldName,
-    class: config.classes?.input ?? `vorm-${config.type}`,
-    type:
-      config.type !== "select" && config.type !== "textarea"
-        ? config.type
-        : undefined,
-    value,
-    placeholder: resolved?.placeholder || undefined,
-    disabled: resolved?.disabled || undefined,
-    onInput: (e: any) =>
-      updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
-    onBlur: (e: any) => {
-      vorm.touched[fieldName] = true;
-      maybeValidate("onBlur", fieldName);
-      emitFieldEvent(
-        "blur",
-        fieldName,
-        getValueByPath(vorm.formData, fieldName),
-        e
-      );
-    },
-  };
-
-  if (config.type === "select") {
-    return h(
-      "select",
-      inputProps,
-      resolveOptions(config).map((opt) =>
-        h("option", { value: opt.value, disabled: opt.disabled }, opt.label)
-      )
-    );
-  }
-
-  if (config.type === "checkbox") {
-    return h("input", {
-      ...inputProps,
-      checked: !!value, // checked instead value
-      value: undefined, // Remove value for checkbox
-      onChange: (e: any) =>
-        updateFieldValue(e, config, vorm, emitFieldEvent, maybeValidate),
-    });
-  }
-
-  return h(config.type === "textarea" ? "textarea" : "input", inputProps);
-}
-
-/**
- * Renders slot or input content
- */
-function renderFieldContent(fieldName: string) {
-  const field = getResolvedFieldConfig(fieldName);
-  if (slots[fieldName]) {
-    return h(
-      "div",
-      {},
-      slots[fieldName]?.({
-        ...vorm.bindField(fieldName).value,
-        slotName: fieldName,
-        field,
-        state: fieldStates.value[fieldName],
-        path: fieldName,
-        indexes: extractRepeaterIndexes(fieldName),
-        content: () => renderDefaultInput(fieldName),
-      })
-    );
-  }
-  return renderDefaultInput(fieldName);
-}
-
-/**
- * Validation logic on interaction
- */
-function maybeValidate(trigger: "onInput" | "onBlur", fieldName: string) {
-  const mode = vorm.getValidationMode(fieldName);
-  if (mode === trigger) {
-    vorm.validateFieldByName(fieldName);
-    emitFieldEvent("validate", fieldName, vorm.formData[fieldName]);
-  }
-}
-
-/**
- * Wrapper slot matching and resolution
- */
 function hasSlot(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(slots, name);
 }
@@ -468,10 +213,7 @@ function parseWrapperSlotNames(slotName: string): string[] {
   if (!slotName.startsWith("wrapper:")) return [];
   const raw = slotName.slice(8).trim();
   if (raw.startsWith("[") && raw.endsWith("]")) {
-    return raw
-      .slice(1, -1)
-      .split(",")
-      .map((s) => s.trim());
+    return raw.slice(1, -1).split(",").map((s) => s.trim());
   }
   return [raw];
 }
@@ -518,6 +260,47 @@ function hasDirectOrAncestrySlot(fieldName: string): boolean {
   return ancestry.some((name) => hasSlot(normalizeFieldName(name)));
 }
 
+// ============ RENDER SLOT (for VormField) ============
+
+function renderSlotForField(fieldName: string, slotProps: any) {
+  // Check for direct field slot
+  if (slots[fieldName]) {
+    return slots[fieldName]!(slotProps);
+  }
+  // Check for ancestry slot (inheritWrapper)
+  const field = getFieldConfig(fieldName);
+  if (field.inheritWrapper) {
+    const ancestry = getAncestryNames(fieldName);
+    for (const name of ancestry) {
+      const normalized = normalizeFieldName(name);
+      if (slots[normalized]) {
+        return slots[normalized]!(slotProps);
+      }
+    }
+  }
+  return null;
+}
+
+function getWrapperSlotForField(fieldName: string) {
+  const wrapperSlotName = getWrapperSlotName(fieldName);
+  if (slots[wrapperSlotName]) {
+    return slots[wrapperSlotName];
+  }
+  return undefined;
+}
+
+function getBeforeSlotForField(fieldName: string) {
+  const slotName = `before-${fieldName}`;
+  return slots[slotName] || undefined;
+}
+
+function getAfterSlotForField(fieldName: string) {
+  const slotName = `after-${fieldName}`;
+  return slots[slotName] || undefined;
+}
+
+// ============ LIFECYCLE ============
+
 onMounted(() => {
   register({ as: props.as });
   const isForm = props.as === "form";
@@ -543,92 +326,24 @@ onMounted(() => {
     :style="containerStyle"
     @submit.prevent="emit('submit', $event)"
   >
-    <template v-for="fieldName in visibleFieldNames" :key="fieldName">
-      <slot
-        v-if="hasSlot(`before-${fieldName}`)"
-        :name="`before-${fieldName}`"
-      />
-
-      <slot
-        v-if="hasSlot(`wrapper:${fieldName}`)"
-        :name="`wrapper:${fieldName}`"
-        :slotName="`wrapper:${fieldName}`"
-        :field="getResolvedFieldConfig(fieldName)"
-        :state="fieldStates[fieldName]"
-        :content="() => renderFieldContent(fieldName)"
-        :indexes="extractRepeaterIndexes(fieldName)"
-        :path="fieldName"
-        v-bind="vorm.bindField(fieldName).value"
-      />
-
-      <slot
-        v-else-if="hasSlotMatchingWrapperMulti(fieldName)"
-        :name="getWrapperSlotName(fieldName)"
-        :slotName="`wrapper:${fieldName}`"
-        :field="getResolvedFieldConfig(fieldName)"
-        :state="fieldStates[fieldName]"
-        :content="() => renderFieldContent(fieldName)"
-        :indexes="extractRepeaterIndexes(fieldName)"
-        :path="fieldName"
-        v-bind="vorm.bindField(fieldName).value"
-      />
-
-      <slot
-        v-else-if="hasSlot('wrapper')"
-        name="wrapper"
-        slotName="wrapper"
-        :field="getResolvedFieldConfig(fieldName)"
-        :state="fieldStates[fieldName]"
-        :content="() => renderFieldContent(fieldName)"
-        :indexes="extractRepeaterIndexes(fieldName)"
-        :path="fieldName"
-        v-bind="vorm.bindField(fieldName).value"
-      />
-
-      <component
-        v-else-if="hasDirectOrAncestrySlot(fieldName)"
-        :is="renderFieldContent(fieldName)"
-      />
-
-      <div
-        v-else
-        :class="getFieldConfig(fieldName).classes?.outer ? getFieldConfig(fieldName).classes!.outer : fieldWrapperClass || 'vorm-group'"
-      >
-        <label
-          :for="'vorm-' + fieldName"
-          v-bind="
-            getFieldConfig(fieldName).classes?.label
-              ? { class: getFieldConfig(fieldName).classes?.label }
-              : null
-          "
-        >
-          {{
-            hasDirectOrAncestrySlot(fieldName)
-              ? ""
-              : resolvedFields[fieldName].label
-          }}
-        </label>
-        <component :is="renderFieldContent(fieldName)" />
-
-        <p
-          v-if="resolvedFields[fieldName].helpText"
-          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'vorm-help'"
-        >
-          {{ resolvedFields[fieldName].helpText }}
-        </p>
-
-        <p
-          v-if="
-            getFieldConfig(fieldName).showError !== false &&
-            fieldStates[fieldName].error
-          "
-          :class="getFieldConfig(fieldName).classes?.help ? getFieldConfig(fieldName).classes!.help : 'vorm-help'"
-        >
-          {{ fieldStates[fieldName].error }}
-        </p>
-      </div>
-
-      <slot v-if="hasSlot(`after-${fieldName}`)" :name="`after-${fieldName}`" />
-    </template>
+    <!-- Each field is its own component = isolated reactivity -->
+    <VormField
+      v-for="fieldName in visibleFieldNames"
+      :key="fieldName"
+      :field-name="fieldName"
+      :error-class="errorClass"
+      :field-wrapper-class="fieldWrapperClass"
+      :wrapper-slot="getWrapperSlotForField(fieldName)"
+      :before-slot="getBeforeSlotForField(fieldName)"
+      :after-slot="getAfterSlotForField(fieldName)"
+      @input="emit('input', $event)"
+      @blur="emit('blur', $event)"
+      @validate="emit('validate', $event)"
+    >
+      <!-- Pass through field slots -->
+      <template v-if="hasDirectOrAncestrySlot(fieldName)" #default="slotProps">
+        <component :is="() => renderSlotForField(fieldName, slotProps)" />
+      </template>
+    </VormField>
   </component>
 </template>
