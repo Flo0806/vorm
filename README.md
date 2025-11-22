@@ -13,7 +13,7 @@ This repository is structured as a **pnpm workspace** with the following package
 | Package      | Description                                                              |
 | ------------ | ------------------------------------------------------------------------ |
 | `vorm-vue`   | The main form engine library for Vue 3                                   |
-| `playground` | Demo app to test Vorm in real-world setups (⚠️ !! Under development !! ) |
+| `playground` | Demo app to test Vorm features and examples |
 | `docs`       | VitePress-powered documentation site                                     |
 
 ---
