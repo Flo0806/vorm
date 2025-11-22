@@ -1,5 +1,15 @@
 # vorm-vue
 
+## 1.2.1
+
+### Patch Changes
+
+- [#46](https://github.com/Flo0806/vorm/pull/46) [`6845275`](https://github.com/Flo0806/vorm/commit/6845275b4311af6e5c2a917c22e0d4549a1fcf20) Thanks [@Flo0806](https://github.com/Flo0806)! - fix: improve input performance with many fields
+  - Add internal VormField component for isolated reactivity per field
+  - Each field now has its own component boundary, preventing re-renders of all fields when one changes
+  - Typing in forms with hundreds of fields is now smooth and responsive
+  - No API changes - this is an internal optimization
+
 ## 1.2.0
 
 ### Minor Changes
