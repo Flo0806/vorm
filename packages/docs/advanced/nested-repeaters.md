@@ -243,7 +243,7 @@ Vorm handles arbitrarily deep nesting:
 
 - [VormRepeater Component](../components/repeater.md)
 - [AutoVorm](../components/autovorm.md)
-- [Conditional Fields](./conditional-fields.md)
+- [Conditional Logic](../core/conditions.md)
 
 ---
 
