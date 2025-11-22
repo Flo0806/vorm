@@ -7,7 +7,7 @@ The schema is the heart of Vorm. It defines your form structure, field types, la
 A schema is simply an array of field definitions:
 
 ```ts
-const schema = [
+const schema: VormSchema = [
   {
     name: "username",
     label: "Username",
@@ -41,6 +41,143 @@ Vorm supports the following field types out of the box:
 
 You can extend this via your own components.
 
+## Reactive Labels, Placeholders & Help Text
+
+All text properties in Vorm support **reactive values**. This means you can use:
+
+- Static strings
+- Vue `Ref<string>` or `ComputedRef<string>`
+- Functions `() => string`
+- Functions with form context `(ctx: FormContext) => string`
+
+### ReactiveString Type
+
+```ts
+type ReactiveString =
+  | string                              // Static: "Username"
+  | Ref<string>                         // Vue Ref: ref('Username')
+  | ComputedRef<string>                 // Vue Computed
+  | (() => string)                      // Function (no computed needed!)
+  | ((ctx: FormContext) => string);     // Function with form context
+```
+
+### Examples
+
+**Simple reactive label (i18n):**
+
+```ts
+{
+  name: 'username',
+  label: () => locale.value === 'en' ? 'Username' : 'Benutzername',
+}
+```
+
+**Dynamic placeholder based on form data:**
+
+```ts
+{
+  name: 'email',
+  placeholder: (ctx) => ctx.formData.username
+    ? `${ctx.formData.username}@example.com`
+    : 'your@email.com',
+}
+```
+
+**Dynamic help text:**
+
+```ts
+{
+  name: 'password',
+  helpText: (ctx) => ctx.formData.email
+    ? `Secure password for ${ctx.formData.email}`
+    : 'At least 8 characters',
+}
+```
+
+::: tip No `computed()` wrapper needed!
+Unlike other libraries, Vorm accepts plain functions. You don't need to wrap everything in `computed()`:
+
+```ts
+// This works!
+label: () => t('form.username')
+
+// This also works (but unnecessary)
+label: computed(() => t('form.username'))
+```
+:::
+
+## FormContext
+
+When using functions with a `ctx` parameter, you get access to the full form state:
+
+```ts
+interface FormContext {
+  formData: Record<string, any>;
+  readonly errors: Record<string, string | null>;
+  readonly isValid: boolean;
+  readonly isDirty: boolean;
+  readonly isTouched: boolean;
+  readonly touched: Record<string, boolean>;
+  readonly dirty: Record<string, boolean>;
+}
+```
+
+## Field Options
+
+For `select` fields, you can define options directly in the schema:
+
+### Static Options
+
+```ts
+{
+  name: 'country',
+  type: 'select',
+  label: 'Country',
+  options: [
+    { label: 'Germany', value: 'DE' },
+    { label: 'USA', value: 'US' },
+  ]
+}
+```
+
+### Reactive Options
+
+Options can also be reactive:
+
+```ts
+const showAdvanced = ref(false);
+
+const schema: VormSchema = [
+  {
+    name: 'city',
+    type: 'select',
+    label: 'City',
+    options: () => {
+      const base = ['Berlin', 'Munich'];
+      return showAdvanced.value ? [...base, 'Frankfurt', 'Cologne'] : base;
+    }
+  }
+];
+```
+
+### Extended Option Properties
+
+Options support custom data via index signature:
+
+```ts
+{
+  name: 'language',
+  type: 'select',
+  label: 'Language',
+  options: [
+    { label: 'English', value: 'en', icon: '🇬🇧', metadata: { code: 'en-US' } },
+    { label: 'German', value: 'de', icon: '🇩🇪', metadata: { code: 'de-DE' } },
+  ]
+}
+```
+
+See [Options & Custom Components](../advanced/options.md) for more details.
+
 ## Repeater Fields
 
 `type: "repeater"` allows you to define repeatable groups of fields. Each repeater has its own `fields` array:
@@ -73,6 +210,8 @@ You can conditionally show or hide a field using the `showIf` property:
 ```
 
 This field is only shown when the value of `role` is exactly `"Admin"`.
+
+See [Conditional Logic](./conditions.md) for more details.
 
 ## Customization
 
@@ -134,3 +273,5 @@ You don't need to define these manually. Vorm builds all paths automatically fro
 ---
 
 - [Validation](./validation.md)
+- [Conditional Logic](./conditions.md)
+- [Options & Custom Components](../advanced/options.md)

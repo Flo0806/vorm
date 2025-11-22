@@ -5,74 +5,99 @@ Vorm provides full access to the internal form state through the `useVorm()` com
 ## Basic Setup
 
 ```ts
-const {
-  formData,
-  errors,
-  touched,
-  dirty,
-  initial,
-  validatedFields,
-  fieldOptionsMap,
-  updateField,
-  updateFields,
-  setFormData,
-  resetForm,
-  validate,
-  validateFieldByName,
-  getValidationMode,
-  addRepeaterItem,
-  removeRepeaterItem,
-  moveRepeaterItem,
-  clearRepeater,
-  touchAll,
-  getErrors,
-  getTouched,
-  getDirty,
-} = useVorm(schema, { validationMode: "onSubmit" });
+import { useVorm, type VormSchema } from 'vorm-vue';
+
+const schema: VormSchema = [/* ... */];
+
+const vorm = useVorm(schema, {
+  validationMode: 'onBlur'  // 'onBlur' | 'onInput' | 'onSubmit'
+});
 ```
 
-## State Fields
+## Reactive State
 
-- `formData`: reactive form values
-- `errors`: error messages per field (null if no error)
-- `touched`: whether a field has been touched
-- `dirty`: whether a field's value has changed
-- `initial`: initial values at time of `setFormData`
-- `validatedFields`: tracks which fields have been validated
-- `fieldOptionsMap`: dynamically injected options for select/radio fields
+### Form Data
 
-## Core Methods
+```ts
+vorm.formData          // Reactive form values
+vorm.errors            // Error messages per field (string | null)
+vorm.touched           // Whether field has been touched
+vorm.dirty             // Whether field value has changed
+vorm.initial           // Initial values at time of setFormData
+vorm.validatedFields   // Which fields have been validated
+```
+
+### Computed State
+
+```ts
+vorm.isValid           // ComputedRef<boolean> - all validated fields pass
+vorm.isDirty           // ComputedRef<boolean> - any field is dirty
+vorm.isTouched         // ComputedRef<boolean> - any field is touched
+```
+
+## Validation Methods
+
+### `validateAll()`
+
+Validates all fields. Returns `true` if all pass:
+
+```ts
+async function handleSubmit() {
+  const isValid = await vorm.validateAll();
+  if (isValid) {
+    // Submit form
+  }
+}
+```
+
+### `validateFieldByName(name)`
+
+Validates a single field:
+
+```ts
+await vorm.validateFieldByName('email');
+```
+
+### `getValidationMode(name)`
+
+Returns the validation trigger for a field:
+
+```ts
+vorm.getValidationMode('email');  // 'onBlur' | 'onInput' | 'onSubmit'
+```
+
+## Update Methods
 
 ### `updateField(name, value, options?)`
 
-Updates a single field. You can mark it as touched, dirty, trigger validation, and assign new options:
+Updates a single field with options:
 
 ```ts
-updateField("role", "Admin", {
+vorm.updateField('role', 'Admin', {
   touched: true,
   dirty: true,
   validate: true,
   fieldOptions: [
-    { label: "User", value: "User" },
-    { label: "Admin", value: "Admin" },
+    { label: 'User', value: 'User' },
+    { label: 'Admin', value: 'Admin' },
   ],
 });
 ```
 
 ### `updateFields(updates, options?)`
 
-Update multiple fields at once. Options like `touched`, `dirty`, and `validate` apply to all, while `fieldOptions` can be set per field:
+Update multiple fields at once:
 
 ```ts
-updateFields(
-  { role: "Admin", username: "flo" },
+vorm.updateFields(
+  { role: 'Admin', username: 'flo' },
   {
     touched: true,
     validate: true,
     fieldOptions: {
       role: [
-        { label: "User", value: "User" },
-        { label: "Admin", value: "Admin" },
+        { label: 'User', value: 'User' },
+        { label: 'Admin', value: 'Admin' },
       ],
     },
   }
@@ -81,19 +106,16 @@ updateFields(
 
 ### `setFormData(data, options?)`
 
-Replace the entire form data and reset internal state. Optionally pass `fieldOptions` per field:
+Replace entire form data and reset state:
 
 ```ts
-setFormData(
-  {
-    username: "flo",
-    role: "Moderator",
-  },
+vorm.setFormData(
+  { username: 'flo', role: 'Moderator' },
   {
     fieldOptions: {
       role: [
-        { label: "User", value: "User" },
-        { label: "Moderator", value: "Moderator" },
+        { label: 'User', value: 'User' },
+        { label: 'Moderator', value: 'Moderator' },
       ],
     },
   }
@@ -102,40 +124,176 @@ setFormData(
 
 ### `resetForm()`
 
-Clears all values, errors, touched/dirty states. Resets to default values based on field types.
-
-### `validate()`
-
-Validates all fields. Updates errors, marks fields as touched and validated. Returns `true` if all pass:
+Clears all values, errors, and state:
 
 ```ts
-const ok = await validate();
+vorm.resetForm();
 ```
 
-### `validateFieldByName(name)`
+## Error Methods
 
-Validates a single field. Updates its error state.
+### `clearErrors()`
 
-### `getValidationMode(name)`
+Clears all validation errors:
 
-Returns the validation trigger for the field: `onBlur`, `onInput`, or `onSubmit`.
+```ts
+vorm.clearErrors();
+```
 
-## Repeater Helpers
+### `clearError(name)`
 
-- `addRepeaterItem(path, item, index?)`: Insert item (default to end)
-- `removeRepeaterItem(path, index)`: Remove item by index
-- `moveRepeaterItem(path, from, to)`: Reorder repeater array
-- `clearRepeater(path)`: Empties the repeater
+Clears error for a specific field:
 
-## Utilities
+```ts
+vorm.clearError('email');
+```
 
-- `touchAll()`: Marks all fields as touched
-- `getErrors()`: Returns a copy of current errors
-- `getTouched()`: Returns touched map
-- `getDirty()`: Returns dirty map
+### `getErrors()`
+
+Returns a copy of current errors:
+
+```ts
+const errors = vorm.getErrors();
+```
+
+## Options Methods
+
+### `getFieldOptions(name)`
+
+Returns resolved options for a select field:
+
+```ts
+const options = vorm.getFieldOptions('country');
+// Returns ComputedRef<Option[]>
+```
+
+### `bindField(name)`
+
+Returns all bindings needed for custom components:
+
+```ts
+const bindings = vorm.bindField('country');
+// Returns ComputedRef<{
+//   modelValue: any;
+//   'onUpdate:modelValue': (v) => void;
+//   items: Option[];
+//   options: Option[];
+//   error: string | undefined;
+//   errorMessages: string[];
+// }>
+```
+
+Usage with Vuetify:
+
+```vue
+<v-select v-bind="vorm.bindField('country').value" />
+```
+
+## Repeater Methods
+
+### `addRepeaterItem(path, item?, index?)`
+
+Add item to repeater (default: end):
+
+```ts
+vorm.addRepeaterItem('contacts', { name: '', email: '' });
+vorm.addRepeaterItem('contacts', { name: '' }, 0);  // Insert at index 0
+```
+
+### `removeRepeaterItem(path, index)`
+
+Remove item by index:
+
+```ts
+vorm.removeRepeaterItem('contacts', 2);
+```
+
+### `moveRepeaterItem(path, from, to)`
+
+Reorder repeater items:
+
+```ts
+vorm.moveRepeaterItem('contacts', 0, 2);  // Move first to third position
+```
+
+### `clearRepeater(path)`
+
+Empty the repeater:
+
+```ts
+vorm.clearRepeater('contacts');
+```
+
+## Utility Methods
+
+### `touchAll()`
+
+Marks all fields as touched:
+
+```ts
+vorm.touchAll();
+```
+
+### `getTouched()` / `getDirty()`
+
+Returns copies of state maps:
+
+```ts
+const touchedFields = vorm.getTouched();
+const dirtyFields = vorm.getDirty();
+```
+
+## Complete Example
+
+```vue
+<script setup lang="ts">
+import { useVorm, type VormSchema, minLength } from 'vorm-vue';
+import { VormProvider, AutoVorm } from 'vorm-vue';
+
+const schema: VormSchema = [
+  {
+    name: 'email',
+    type: 'email',
+    label: 'Email',
+    validation: [{ rule: 'required' }, { rule: 'email' }],
+  },
+  {
+    name: 'password',
+    type: 'password',
+    label: 'Password',
+    validation: [{ rule: 'required' }, { rule: minLength(8) }],
+  },
+];
+
+const vorm = useVorm(schema, { validationMode: 'onBlur' });
+
+async function handleSubmit() {
+  const isValid = await vorm.validateAll();
+  if (isValid) {
+    console.log('Submitting:', vorm.formData);
+  }
+}
+
+function handleReset() {
+  vorm.resetForm();
+}
+</script>
+
+<template>
+  <VormProvider :vorm="vorm">
+    <AutoVorm as="form" @submit="handleSubmit">
+      <div class="buttons">
+        <button type="submit" :disabled="!vorm.isValid.value">Submit</button>
+        <button type="button" @click="handleReset">Reset</button>
+      </div>
+    </AutoVorm>
+  </VormProvider>
+
+  <!-- Debug info -->
+  <pre>{{ { isValid: vorm.isValid.value, isDirty: vorm.isDirty.value } }}</pre>
+</template>
+```
 
 ---
 
-> The returned context from `useVorm` is your gateway to dynamic form behavior, programmatic control, and granular state access.
-
-You can bind it to `<VormProvider>` with `v-model="formData"` to keep it reactive across components.
+> The `useVorm()` context is your gateway to dynamic form behavior, programmatic control, and granular state access.

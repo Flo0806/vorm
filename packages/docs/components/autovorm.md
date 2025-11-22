@@ -11,6 +11,7 @@ AutoVorm handles:
 - Validation state per field (`error`, `touched`, `dirty`, `valid`)
 - Automatic rendering of `<label>`, `<input>`, error message
 - Wrapper resolution and scoped slot injection (per field, grouped, or fallback)
+- Reactive label/placeholder/helpText resolution
 
 ## Props
 
@@ -31,7 +32,7 @@ AutoVorm handles:
 
 | Event      | Payload                                                 |
 | ---------- | ------------------------------------------------------- |
-| `submit`   | The native `SubmitEvent` (only if `as` is `form`        |
+| `submit`   | The native `SubmitEvent` (only if `as` is `form`)       |
 | `input`    | `{ name, value, field, originalEvent, preventDefault }` |
 | `blur`     | `{ name, value, field, originalEvent, preventDefault }` |
 | `validate` | `{ name, value, field, originalEvent, preventDefault }` |
@@ -40,29 +41,180 @@ AutoVorm handles:
 
 AutoVorm supports a flexible slot system:
 
+### Field Slots
+
+Use a slot named after the field to completely override rendering:
+
+```vue
+<AutoVorm>
+  <template #email="{ field, state }">
+    <div class="custom-field">
+      <label>{{ field.label }}</label>
+      <input v-model="vorm.formData.email" />
+      <span v-if="state.error">{{ state.error }}</span>
+    </div>
+  </template>
+</AutoVorm>
+```
+
 ### Wrapper Slots
 
-- `wrapper:fieldName`
-- `wrapper:[fieldA,fieldB]`
-- `wrapper` (global fallback)
+Wrapper slots let you customize the field container while keeping the default input:
 
-### Inline Field Slots
+- `wrapper:fieldName` - Specific field wrapper
+- `wrapper:[fieldA,fieldB]` - Multi-field wrapper
+- `wrapper` - Global fallback
+
+```vue
+<AutoVorm>
+  <template #wrapper:email="{ field, state, content }">
+    <div class="my-wrapper">
+      <label>{{ field.label }}</label>
+      <component :is="content" />
+      <span v-if="state.error">{{ state.error }}</span>
+    </div>
+  </template>
+</AutoVorm>
+```
+
+### Before/After Slots
+
+Add content before or after specific fields:
 
 - `before-fieldName`
 - `after-fieldName`
 
-### Slot Props
+```vue
+<AutoVorm>
+  <template #before-password>
+    <div class="hint">Password requirements:</div>
+  </template>
+  <template #after-password>
+    <div class="strength-indicator">Strength: Strong</div>
+  </template>
+</AutoVorm>
+```
 
-Each wrapper receives:
+## Slot Props
+
+Each slot receives comprehensive props for building custom fields:
+
+### Field Slots
 
 ```ts
 {
-  field: VormFieldSchema,
-  state: FieldState,
-  content: () => VNode, // rendered input
-  path: string,
-  indexes: number[]     // e.g. [0, 1] for nested repeaters
+  field: ResolvedVormFieldSchema,  // Schema with resolved strings
+  state: FieldState,               // Validation state
+  path: string,                    // Full field path (e.g., "contacts[0].email")
+  indexes: number[]                // Repeater indexes (e.g., [0, 1])
 }
+```
+
+### Wrapper Slots
+
+Wrapper slots receive all field slot props, plus:
+
+```ts
+{
+  // All field slot props...
+  content: () => VNode,            // Rendered input component
+  modelValue: any,                 // Current field value
+  'onUpdate:modelValue': (v) => void,  // Update handler
+  items: Option[],                 // Resolved options (for select)
+  options: Option[],               // Alias for items
+  error: string | undefined,       // Error message
+  errorMessages: string[]          // Array format (Vuetify style)
+}
+```
+
+### Resolved Field Schema
+
+All reactive strings (labels, placeholders, etc.) are **pre-resolved** to plain strings:
+
+```ts
+interface ResolvedVormFieldSchema {
+  name: string;
+  type: string;
+  label: string;           // Already resolved!
+  placeholder: string;     // Already resolved!
+  helpText: string;        // Already resolved!
+  // ... other properties
+}
+```
+
+This means you can use them directly in templates:
+
+```vue
+<template #email="{ field }">
+  <label>{{ field.label }}</label>  <!-- Works directly! -->
+</template>
+```
+
+## Using with Third-Party Components
+
+### Vuetify Integration
+
+AutoVorm's wrapper slots are designed for seamless Vuetify integration:
+
+```vue
+<AutoVorm>
+  <template #wrapper:country="slotProps">
+    <!-- v-bind spreads all necessary props -->
+    <v-select v-bind="slotProps" />
+  </template>
+</AutoVorm>
+```
+
+The slot props include:
+- `modelValue` / `onUpdate:modelValue` - for v-model
+- `items` - Vuetify's naming convention for options
+- `errorMessages` - Array format Vuetify expects
+
+### Custom Components
+
+```vue
+<AutoVorm>
+  <template #wrapper:city="{ modelValue, options, 'onUpdate:modelValue': update, error }">
+    <CustomSelect
+      :value="modelValue"
+      :options="options"
+      @change="update"
+    />
+    <span v-if="error">{{ error }}</span>
+  </template>
+</AutoVorm>
+```
+
+## The `bindField()` Method
+
+For cases where you need field bindings outside of AutoVorm, use `vorm.bindField()`:
+
+```ts
+const vorm = useVorm(schema);
+
+// Get all bindings for a field
+const countryBindings = vorm.bindField('country');
+```
+
+Returns a ComputedRef with:
+
+```ts
+{
+  modelValue: any;
+  'onUpdate:modelValue': (value: any) => void;
+  items: Option[];           // Vuetify convention
+  options: Option[];         // Generic convention
+  error: string | undefined;
+  errorMessages: string[];   // Vuetify convention
+}
+```
+
+**Usage outside AutoVorm:**
+
+```vue
+<template>
+  <v-select v-bind="vorm.bindField('country').value" />
+</template>
 ```
 
 ## Validation State
@@ -88,14 +240,15 @@ AutoVorm automatically determines which fields to render based on:
 
 ## Rendering Strategy
 
-- If a matching **slot** exists: use it
-- If a matching **wrapper slot** exists: use it with `content()`
-- If no slot: render `<label>`, `<input|select|textarea>`, and `<p>` (error)
+1. If a matching **field slot** exists: use it
+2. If a matching **wrapper slot** exists: use it with `content()`
+3. If no slot: render `<label>`, `<input|select|textarea>`, and `<p>` (error)
 
 ## Recommendations
 
 - Use `<AutoVorm>` when you want a fully dynamic, schema-driven form
 - Combine with `wrapper` slots for layout customization
+- Use `v-bind` with slot props for third-party component integration
 - For advanced control, you can render manually using `VormProvider`
 
 ---
@@ -103,6 +256,7 @@ AutoVorm automatically determines which fields to render based on:
 - [VormProvider](./provider.md)
 - [VormRepeater](./repeater.md)
 - [VormSection](./section.md)
+- [Options & Custom Components](../advanced/options.md)
 
 ---
 

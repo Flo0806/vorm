@@ -1,231 +1,295 @@
 # Slot System
 
-AutoVorm supports a powerful slot API:
+AutoVorm supports a powerful slot API that gives you complete control over field rendering while maintaining all the benefits of automatic validation and state management.
+
+## Slot Types
+
+### Field Slots
+
+Replace the entire field rendering:
+
+```vue
+<AutoVorm>
+  <template #email="{ field, state }">
+    <div class="custom-email">
+      <label>{{ field.label }}</label>
+      <input v-model="vorm.formData.email" type="email" />
+      <span v-if="state.error">{{ state.error }}</span>
+    </div>
+  </template>
+</AutoVorm>
+```
 
 ### Wrapper Slots
 
-- `wrapper:fieldName` — exact match
-- `wrapper:[fieldA,fieldB]` — for multiple fields
-- `wrapper` — fallback for all others
+Wrap the default input while keeping automatic rendering:
 
-### Inline Field Slots
+- `wrapper:fieldName` — specific field wrapper
+- `wrapper:[fieldA,fieldB]` — multi-field wrapper
+- `wrapper` — global fallback
 
-- `before-fieldName`
-- `after-fieldName`
+```vue
+<AutoVorm>
+  <template #wrapper:email="{ field, state, content }">
+    <div class="my-wrapper">
+      <label>{{ field.label }}</label>
+      <component :is="content" />
+      <span v-if="state.error">{{ state.error }}</span>
+    </div>
+  </template>
+</AutoVorm>
+```
 
-### Slot Context
+### Before/After Slots
 
-Wrapper slots receive the following props:
+Add content before or after fields:
+
+```vue
+<AutoVorm>
+  <template #before-password>
+    <div class="hint">Password must be at least 8 characters</div>
+  </template>
+  <template #after-password>
+    <div class="strength">Strength: Strong</div>
+  </template>
+</AutoVorm>
+```
+
+## Slot Props
+
+### Field Slot Props
 
 ```ts
 {
-  field: VormFieldSchema;
-  state: FieldState;
-  content: () => VNode;     // Renders the input
-  path: string;             // Full field path (including repeaters)
-  indexes: number[];        // E.g. [0, 1] for nested repeaters
+  field: ResolvedVormFieldSchema,  // Schema with resolved strings
+  state: FieldState,               // Validation state
+  path: string,                    // Full path (e.g., "contacts[0].email")
+  indexes: number[]                // Repeater indexes
 }
 ```
 
-This allows full control over how each field is rendered, while keeping reactivity and validation intact.
+### Wrapper Slot Props
 
-### Advanced: Slot and Wrapper Priorities
+Wrapper slots receive all field props plus bindings for third-party components:
 
-AutoVorm resolves slots in the following order:
+```ts
+{
+  // Field slot props
+  field: ResolvedVormFieldSchema,
+  state: FieldState,
+  path: string,
+  indexes: number[],
+  content: () => VNode,            // Renders default input
 
-1. `wrapper:fieldName`
-2. `wrapper:[fieldA,fieldB]` if fieldName matches
-3. Inherited wrapper via field.inheritWrapper + ancestor match (set `inheritWrapper=true` in schema field)
-4. `wrapper` (global fallback)
-5. Direct field slot (e.g. `#myField`)
-6. Default rendering with label/input/error
-
-This means you can globally override how fields look or provide fine-grained control for specific fields.
-
-### Slots vs. Auto Layout
-
-If you provide a slot for a field, AutoVorm won't render a label or error message unless you do it manually. This gives you complete design freedom.
-
-### Example with Wrapper Slot
-
-```vue
-<template #wrapper:email="{ field, state, content }">
-  <div class="my-wrapper">
-    <label>{{ field.label }}</label>
-    <div class="input-area">
-      <component :is="content()" />
-    </div>
-    <p v-if="state.error">{{ state.error }}</p>
-  </div>
-</template>
+  // Bindings for custom/third-party components
+  modelValue: any,                 // Current value
+  'onUpdate:modelValue': (v) => void,  // Update handler
+  items: Option[],                 // Options (Vuetify naming)
+  options: Option[],               // Options (generic naming)
+  error: string | undefined,       // Error message
+  errorMessages: string[]          // Errors as array (Vuetify)
+}
 ```
 
----
-
-> The slot system in Vorm is designed to give you full power over layout, structure, styling, and interaction — without losing the benefits of auto-validation or schema-driven logic.
-
-## Field State
-
-Each field in AutoVorm receives a derived state object containing:
-
-- `slotName` (string: e.g. wrapper:notes)
-- `state` (FieldState)\*
-- `field` (VormFieldSchema)\*
-- `indexes` (Repeater indexes)\*
-- `path` (string: e.g. notes)
-
-### Interfaces
+## FieldState Interface
 
 ```ts
 interface FieldState {
   error: string | null;
   valid: boolean;
   invalid: boolean;
-  validationMode: "onInput" | "onBlur" | "onSubmit";
-  classes: string;
+  validationMode: 'onInput' | 'onBlur' | 'onSubmit';
   touched: boolean;
   dirty: boolean;
   initialValue: any;
-}
-
-interface VormFieldSchema {
-  name: string;
-  type:
-    | "text"
-    | "number"
-    | "select"
-    | "checkbox"
-    | "radio"
-    | "textarea"
-    | "date"
-    | "datetime"
-    | "email"
-    | "password"
-    | string; // Custom types can be added
-  required?: boolean;
-  disabled?: boolean;
-  label?: string;
-  showError?: boolean;
-  placeholder?: string;
-  helpText?: string;
-  showIf?: ShowIfCondition;
-  validation?: ValidationRule[];
-  validationMode?: ValidationMode;
-  classes?: {
-    outer?: string;
-    input?: string;
-    label?: string;
-    help?: string;
-  };
-  fields?: VormSchema;
-  inheritWrapper?: boolean;
-}
-
-export type ShowIfCondition =
-  | Record<string, any>
-  | ((formData: Record<string, any>, path: string) => boolean)
-  | {
-      dependsOn: string;
-      condition: (
-        value: any,
-        formData: Record<string, any>,
-        path: string
-      ) => boolean;
-    };
-
-// Repeater indexes like:
-{
-    contacts: 1
-    ....
+  classes: string;
 }
 ```
 
-## Visibility
+## ResolvedVormFieldSchema
+
+All reactive strings are **pre-resolved** to plain strings:
+
+```ts
+interface ResolvedVormFieldSchema {
+  name: string;
+  type: string;
+  label: string;           // Already resolved!
+  placeholder: string;     // Already resolved!
+  helpText: string;        // Already resolved!
+  disabled: boolean;       // Already resolved!
+  required: boolean;
+  showError: boolean;
+  classes: { /* ... */ };
+  // ... other properties
+}
+```
+
+## Slot Resolution Priority
+
+AutoVorm resolves slots in this order:
+
+1. `wrapper:fieldName` — exact wrapper match
+2. `wrapper:[fieldA,fieldB]` — multi-field wrapper match
+3. Inherited wrapper via `inheritWrapper: true`
+4. `wrapper` — global fallback
+5. Direct field slot (`#fieldName`)
+6. Default rendering
+
+## Third-Party Integration
+
+### Vuetify
+
+```vue
+<AutoVorm>
+  <template #wrapper:country="slotProps">
+    <v-select
+      v-bind="slotProps"
+      :label="slotProps.field.label"
+      variant="outlined"
+    />
+  </template>
+</AutoVorm>
+```
+
+### PrimeVue
+
+```vue
+<AutoVorm>
+  <template #wrapper:city="{ modelValue, options, 'onUpdate:modelValue': update, error }">
+    <Dropdown
+      :model-value="modelValue"
+      :options="options"
+      option-label="label"
+      option-value="value"
+      @update:model-value="update"
+      :class="{ 'p-invalid': error }"
+    />
+    <small v-if="error" class="p-error">{{ error }}</small>
+  </template>
+</AutoVorm>
+```
+
+### Headless UI
+
+```vue
+<AutoVorm>
+  <template #wrapper:status="{ modelValue, options, 'onUpdate:modelValue': update, field }">
+    <Listbox :model-value="modelValue" @update:model-value="update">
+      <ListboxLabel>{{ field.label }}</ListboxLabel>
+      <ListboxButton>{{ modelValue || 'Select...' }}</ListboxButton>
+      <ListboxOptions>
+        <ListboxOption v-for="opt in options" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </ListboxOption>
+      </ListboxOptions>
+    </Listbox>
+  </template>
+</AutoVorm>
+```
+
+## Wrapper Inheritance
+
+Enable `inheritWrapper: true` on a field to let nested fields use parent wrappers:
+
+```ts
+const schema: VormSchema = [
+  {
+    name: 'contacts',
+    type: 'repeater',
+    fields: [
+      { name: 'email', type: 'email', inheritWrapper: true }
+    ]
+  }
+];
+```
+
+Now `wrapper:email` will also apply to `contacts[0].email`, `contacts[1].email`, etc.
+
+## Multi-Field Wrappers
+
+Apply the same wrapper to multiple fields:
+
+```vue
+<AutoVorm>
+  <template #wrapper:[email,phone,address]="{ field, state, content }">
+    <div class="contact-field">
+      <label>{{ field.label }}</label>
+      <component :is="content" />
+      <span v-if="state.error">{{ state.error }}</span>
+    </div>
+  </template>
+</AutoVorm>
+```
+
+## Visibility Control
 
 AutoVorm determines visible fields based on:
 
-- `only` (explicit inclusion)
-- `excludeRepeaters` (removes repeaters + nested children)
-- `showIf` condition in the schema (function or relative path)
+- `only` — explicit field inclusion
+- `excludeRepeaters` — skip repeaters and children
+- `showIf` — conditional visibility in schema
 
-## Rendering Logic
-
-- If wrapper slot is found → rendered with full slot context
-- If field-specific slot exists → used directly
-- If neither → default `<label>`, `<input|select|textarea>`, `<p>` (error) will be rendered
-
-## Custom Inputs
-
-You can fully replace how a field is rendered using a scoped slot and a custom input component. This gives you complete control over markup, logic, style, and behavior.
-
-### Example Usage
-
-```vue
-<template #notes="{ field, state, path }">
-  <VormInput
-    :field="field"
-    :path="path"
-    v-model="formData"
-    :error="state.error"
-  />
-</template>
-```
-
-### Example Implementation (`VormInput.vue`)
+## Complete Example
 
 ```vue
 <script setup lang="ts">
-import { useVormContext } from "vorm";
-import { getValueByPath, setValueByPath } from "vorm";
-import type { VormFieldSchema } from "vorm";
-import { computed } from "vue";
+import { useVorm, type VormSchema } from 'vorm-vue';
+import { VormProvider, AutoVorm } from 'vorm-vue';
 
-const props = defineProps<{
-  field: VormFieldSchema;
-  path: string;
-  modelValue?: any;
-  error?: string | null;
-}>();
-const emit = defineEmits<{ (e: "update:modelValue", value: any): void }>();
-const vorm = useVormContext();
-
-const isBoundToVorm = computed(() => vorm && vorm.formData && props.path);
-
-const model = computed({
-  get() {
-    return isBoundToVorm.value
-      ? getValueByPath(vorm!.formData, props.path)
-      : props.modelValue;
+const schema: VormSchema = [
+  { name: 'name', type: 'text', label: 'Name' },
+  { name: 'email', type: 'email', label: 'Email' },
+  {
+    name: 'country',
+    type: 'select',
+    label: 'Country',
+    options: [
+      { label: 'Germany', value: 'DE' },
+      { label: 'France', value: 'FR' },
+    ]
   },
-  set(val: any) {
-    if (isBoundToVorm.value) {
-      setValueByPath(vorm!.formData, props.path, val);
-    } else {
-      emit("update:modelValue", val);
-    }
-  },
-});
+];
 
-const error = computed(() =>
-  isBoundToVorm.value && vorm?.errors ? vorm.errors[props.path] : props.error
-);
+const vorm = useVorm(schema);
 </script>
 
 <template>
-  <div class="flex flex-col gap-1">
-    <label :for="path">{{ field.label }}</label>
-    <input
-      :id="path"
-      :name="path"
-      :type="field.type"
-      class="border px-2 py-1"
-      v-model="model"
-    />
-    <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
-  </div>
+  <VormProvider :vorm="vorm">
+    <AutoVorm>
+      <!-- Custom wrapper for all fields -->
+      <template #wrapper="{ field, state, content }">
+        <div class="field-group" :class="{ 'has-error': state.error }">
+          <label class="label">{{ field.label }}</label>
+          <component :is="content" class="input" />
+          <p v-if="state.error" class="error">{{ state.error }}</p>
+          <p v-if="field.helpText" class="help">{{ field.helpText }}</p>
+        </div>
+      </template>
+
+      <!-- Custom select rendering -->
+      <template #wrapper:country="{ field, modelValue, options, 'onUpdate:modelValue': update }">
+        <div class="field-group">
+          <label>{{ field.label }}</label>
+          <select :value="modelValue" @change="update($event.target.value)">
+            <option value="">Select...</option>
+            <option v-for="opt in options" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+      </template>
+    </AutoVorm>
+  </VormProvider>
 </template>
 ```
 
 ---
 
-> AutoVorm is the fastest way to create a reactive, validated, schema-driven form — with a powerful slot system that enables full customization.
+- [AutoVorm](../components/autovorm.md)
+- [Custom Inputs](./custom-inputs.md)
+- [Options & Custom Components](./options.md)
+
+---
+
+> The slot system gives you full control over layout, structure, and styling — without losing automatic validation or schema-driven logic.

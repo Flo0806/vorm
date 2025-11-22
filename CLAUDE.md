@@ -167,19 +167,14 @@ Fields support `showIf` conditions:
 
 ## i18n and Reactivity System
 
-**Status**: ✅ Implemented (v1.2.0)
-
 Vorm supports comprehensive i18n with reactive labels, placeholders, helpText, and validation messages. Language changes update text WITHOUT re-triggering validation.
 
 **Key Features**:
-- Reactive labels, placeholders, helpText, validation messages
+- `ReactiveString`: `string | Ref | ComputedRef | (() => string) | ((ctx: FormContext) => string)`
 - Functions without `computed()` wrapper: `label: () => t('key')`
 - Dynamic text based on form state: `placeholder: (ctx) => ctx.formData.username + '@example.com'`
-- Built-in i18n keys for all validators
-- `vorm.errors` is reactive object (no `.value` needed)
+- Built-in i18n keys for all validators (e.g., `vorm.validation.required`)
 - AutoVorm slots receive resolved strings
-
-**📖 Complete Documentation**: See [I18N_REACTIVITY_IMPLEMENTATION.md](./I18N_REACTIVITY_IMPLEMENTATION.md) for full implementation details, usage examples, and architecture.
 
 **Demo**: `/packages/playground/src/demos/I18nDemo.vue`
 

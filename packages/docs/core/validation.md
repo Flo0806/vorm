@@ -37,14 +37,116 @@ You can also define a custom error message:
 | ------------ | ------------------------------------------------------------- |
 | `required`   | Field must not be empty                                       |
 | `email`      | Must be a valid email address                                 |
-| `min`        | Minimum numeric or string length (use with `value`)           |
-| `max`        | Maximum numeric or string length (use with `value`)           |
-| `between`    | Value must be between min and max (use with `min` and `max`)  |
+| `minLength`  | Minimum string length (use as function: `minLength(5)`)       |
+| `maxLength`  | Maximum string length (use as function: `maxLength(100)`)     |
+| `min`        | Minimum numeric value (use as function: `min(0)`)             |
+| `max`        | Maximum numeric value (use as function: `max(100)`)           |
+| `between`    | Value must be between min and max: `between(1, 10)`           |
 | `matchField` | Must match another field (e.g., confirm password)             |
-| `step`       | Value must align to a given step (e.g., for numbers like 0.5) |
+| `step`       | Value must align to a given step (e.g., `step(0.5)`)          |
+| `pattern`    | Must match a regex pattern                                    |
 | `integer`    | Must be an integer                                            |
 | `url`        | Must be a valid URL                                           |
 | `alpha`      | Must contain only alphabetic characters                       |
+
+### Using Validator Functions
+
+For validators with parameters, import and use them as functions:
+
+```ts
+import { minLength, maxLength, between, min, max, step, matchField } from 'vorm-vue';
+
+const schema: VormSchema = [
+  {
+    name: "username",
+    label: "Username",
+    type: "text",
+    validation: [
+      { rule: "required" },
+      { rule: minLength(3) },
+      { rule: maxLength(20) }
+    ]
+  },
+  {
+    name: "age",
+    label: "Age",
+    type: "number",
+    validation: [
+      { rule: between(18, 120) }
+    ]
+  },
+  {
+    name: "confirmPassword",
+    label: "Confirm Password",
+    type: "password",
+    validation: [
+      { rule: matchField("password") }
+    ]
+  }
+];
+```
+
+## i18n Support
+
+All built-in validators return **i18n message keys** instead of hardcoded strings. This allows automatic translation when you change the locale.
+
+### Built-in Message Keys
+
+| Validator    | Key                           | Params          |
+| ------------ | ----------------------------- | --------------- |
+| `required`   | `vorm.validation.required`    | -               |
+| `email`      | `vorm.validation.email`       | -               |
+| `minLength`  | `vorm.validation.minLength`   | `[min]`         |
+| `maxLength`  | `vorm.validation.maxLength`   | `[max]`         |
+| `min`        | `vorm.validation.min`         | `[min]`         |
+| `max`        | `vorm.validation.max`         | `[max]`         |
+| `between`    | `vorm.validation.between`     | `[min, max]`    |
+| `step`       | `vorm.validation.step`        | `[step]`        |
+| `pattern`    | `vorm.validation.pattern`     | -               |
+| `matchField` | `vorm.validation.matchField`  | `[fieldName]`   |
+| `url`        | `vorm.validation.url`         | -               |
+| `integer`    | `vorm.validation.integer`     | -               |
+| `alpha`      | `vorm.validation.alpha`       | -               |
+
+### Default Translations
+
+Vorm includes built-in translations for English and German. Messages are interpolated with `{0}`, `{1}`, etc. for parameters.
+
+### Custom i18n Messages
+
+Override the default messages or add your own:
+
+```ts
+const vorm = useVorm(schema, {
+  i18n: {
+    'vorm.validation.required': 'Dieses Feld ist erforderlich',
+    'vorm.validation.minLength': 'Mindestens {0} Zeichen erforderlich',
+  }
+});
+```
+
+See [Internationalization](../advanced/i18n.md) for more details.
+
+## Reactive Validation Messages
+
+Validation messages support **ReactiveString** — just like labels and placeholders:
+
+```ts
+{
+  name: "age",
+  validation: [{
+    rule: between(18, 100),
+    // Dynamic message with FormContext
+    message: (ctx) => locale.value === 'en'
+      ? `Age must be 18-100 (you entered: ${ctx.formData.age || 'nothing'})`
+      : `Alter muss 18-100 sein (eingegeben: ${ctx.formData.age || 'nichts'})`
+  }]
+}
+```
+
+::: tip Language changes don't re-validate
+When you change the locale, error messages update automatically **without re-running validation**. This is achieved through Vorm's two-layer error system.
+:::
 
 ## Custom Functions
 
@@ -57,7 +159,8 @@ You can also define your own validator as a function:
   type: "number",
   validation: [
     {
-      rule: (value: string): string | null => value.length >= 3 ? null : "Custom maxLength validator"
+      rule: (value: string): string | null =>
+        value.length >= 3 ? null : "Minimum 3 characters required"
     }
   ]
 }
@@ -67,7 +170,7 @@ The function can return:
 
 - `null` → valid
 - a `string` → interpreted as the error message
-- a `ValidationResult` → interpreted as the error message
+- a `ValidationResult` → message with optional params
 
 ### ValidationResult
 
@@ -96,11 +199,11 @@ Async functions are supported out of the box:
 }
 ```
 
-> ✅ Vorm automatically detects async rules and handles them just like sync ones — no configuration needed.
+> Vorm automatically detects async rules and handles them just like sync ones — no configuration needed.
 
 ## Affects: Reactive Error Mirroring
 
-Validation rules can define an affects property to mirror their validation result onto other fields. This is especially useful for matching fields like email confirmation or cross-field conditions.
+Validation rules can define an `affects` property to mirror their validation result onto other fields. This is especially useful for matching fields like email confirmation or cross-field conditions.
 
 ```ts
 {
@@ -108,8 +211,7 @@ Validation rules can define an affects property to mirror their validation resul
   type: "email",
   validation: [
     {
-      rule: "matchField",
-      args: { field: "email" },
+      rule: matchField("email"),
       affects: "email"
     }
   ]
@@ -120,7 +222,7 @@ Validation rules can define an affects property to mirror their validation resul
 }
 ```
 
-If confirmEmail is invalid (e.g. does not match email), the same error will also be displayed on the email field.
+If `confirmEmail` is invalid (e.g. does not match email), the same error will also be displayed on the email field.
 
 You can also affect multiple fields:
 
@@ -132,7 +234,7 @@ You can also affect multiple fields:
 }
 ```
 
-✅ Affects does not revalidate other fields. Instead, it propagates the same error message to the specified fields if the current rule fails.
+`affects` does not revalidate other fields. Instead, it propagates the same error message to the specified fields if the current rule fails.
 
 ## Controlling Validation Flow
 
@@ -145,7 +247,7 @@ You can control when a field is validated using `validationMode`, set globally o
 Set globally with:
 
 ```ts
-const { setValidationMode } = useVorm(schema, { validationMode: "onBlur" });
+const vorm = useVorm(schema, { validationMode: "onBlur" });
 ```
 
 Or per field (inside the schema):
@@ -153,7 +255,7 @@ Or per field (inside the schema):
 ```ts
 {
   name: "email",
-  label: "E-Mail-Adresse",
+  label: "E-Mail",
   type: "email",
   validationMode: "onInput",
   validation: [
@@ -163,6 +265,40 @@ Or per field (inside the schema):
 }
 ```
 
+## Programmatic Validation
+
+You can trigger validation manually:
+
+```ts
+const vorm = useVorm(schema);
+
+// Validate single field
+await vorm.validateFieldByName('email');
+
+// Validate all fields
+const isValid = await vorm.validateAll();
+
+// Check validity without triggering validation
+const isCurrentlyValid = vorm.isValid;
+```
+
+## Accessing Errors
+
+```ts
+// Get all errors
+console.log(vorm.errors);  // { email: 'Invalid email', username: null }
+
+// Get single error
+console.log(vorm.errors.email);  // 'Invalid email' or null
+
+// Clear errors
+vorm.clearErrors();
+vorm.clearError('email');
+```
+
 ---
 
-> Validation is core to Vorm’s architecture. Every rule is tracked, can be programmatically triggered, and integrates seamlessly with error display, repeater logic, and slot behavior.
+> Validation is core to Vorm's architecture. Every rule is tracked, can be programmatically triggered, and integrates seamlessly with error display, repeater logic, and slot behavior.
+
+- [Schema Definition](./schema.md)
+- [Internationalization](../advanced/i18n.md)

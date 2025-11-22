@@ -9,7 +9,8 @@ export default defineConfig({
     logo: "/vorm-logo-small.png",
     nav: [
       { text: "Start", link: "/" },
-      { text: "API", link: "/getting-started/concepts" },
+      { text: "API", link: "/api/" },
+      { text: "Nuxt", link: "/nuxt/" },
       { text: "GitHub", link: "https://github.com/Flo0806/vorm" },
     ],
     sidebar: [
@@ -42,10 +43,18 @@ export default defineConfig({
       {
         text: "Advanced Topics",
         items: [
+          { text: "Internationalization", link: "/advanced/i18n" },
+          { text: "Options & Custom Components", link: "/advanced/options" },
           { text: "Custom Inputs", link: "/advanced/custom-inputs" },
           { text: "Slots & Wrappers", link: "/advanced/slots" },
           { text: "Events", link: "/advanced/events" },
           { text: "Nested Repeaters", link: "/advanced/nested-repeaters" },
+        ],
+      },
+      {
+        text: "Nuxt Integration",
+        items: [
+          { text: "Overview", link: "/nuxt/" },
         ],
       },
       {

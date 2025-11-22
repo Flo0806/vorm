@@ -1,84 +1,175 @@
 # Component: VormProvider
 
-`<VormProvider>` is the context bridge component in Vorm. It connects a schema and all form state to its children and enables them to access, modify, and validate fields.
+`<VormProvider>` is the context bridge component in Vorm. It connects the form context from `useVorm()` to all child components, enabling them to access, modify, and validate fields.
 
-It is required for any Vorm input, repeater, or section component to function.
+## Basic Usage
 
----
+```vue
+<script setup lang="ts">
+import { useVorm, type VormSchema } from 'vorm-vue';
+import { VormProvider, AutoVorm } from 'vorm-vue';
 
-## Purpose
+const schema: VormSchema = [
+  { name: 'email', type: 'email', label: 'Email' },
+  { name: 'password', type: 'password', label: 'Password' },
+];
 
-- Injects `useVorm()` context to its children.
-- Provides access to `formData`, `errors`, `touched`, `dirty`, `initial`, `validate`, etc.
-- Allows nesting (each instance can provide a different schema segment).
-- Enables scoped field rendering via `only` prop.
+const vorm = useVorm(schema);
+</script>
 
----
+<template>
+  <VormProvider :vorm="vorm">
+    <AutoVorm />
+  </VormProvider>
+</template>
+```
 
 ## Props
 
-| Prop         | Type                 | Description                                           |
-| ------------ | -------------------- | ----------------------------------------------------- |
-| `contextKey` | `symbol` or `string` | A custom context key. Needed if using multple schemas |
+| Prop         | Type                  | Description                                           |
+| ------------ | --------------------- | ----------------------------------------------------- |
+| `vorm`       | `VormContext`         | The form context from `useVorm()` (required)          |
+| `contextKey` | `symbol` or `string`  | Custom context key for multiple forms on same page    |
 
----
+## When to Use VormProvider
 
-## Slots
+### Required: Multiple Forms
 
-The default slot will render all children within the Vorm context. These children can use `<AutoVorm>`, or custom components that consume the context via `useVormContext()`.
+When you have multiple forms on the same page:
 
----
+```vue
+<script setup lang="ts">
+const loginSchema: VormSchema = [/* ... */];
+const registerSchema: VormSchema = [/* ... */];
 
-## Example
+const loginForm = useVorm(loginSchema);
+const registerForm = useVorm(registerSchema);
+</script>
+
+<template>
+  <VormProvider :vorm="loginForm">
+    <AutoVorm as="form" @submit="handleLogin" />
+  </VormProvider>
+
+  <VormProvider :vorm="registerForm">
+    <AutoVorm as="form" @submit="handleRegister" />
+  </VormProvider>
+</template>
+```
+
+### Required: Custom Components
+
+When building custom input components that need form access:
+
+```vue
+<!-- Parent -->
+<VormProvider :vorm="vorm">
+  <MyCustomForm />
+</VormProvider>
+
+<!-- MyCustomForm.vue -->
+<script setup>
+import { useVormContext } from 'vorm-vue';
+
+const vorm = useVormContext();
+// Now has access to vorm.formData, vorm.errors, etc.
+</script>
+```
+
+### Optional: Single Form with AutoVorm
+
+For simple cases with a single form, VormProvider is still recommended for clarity:
+
+```vue
+<VormProvider :vorm="vorm">
+  <AutoVorm />
+</VormProvider>
+```
+
+## Using Context Keys
+
+For complex pages with multiple forms that might conflict:
+
+```vue
+<script setup lang="ts">
+const FORM_A = Symbol('formA');
+const FORM_B = Symbol('formB');
+
+const formA = useVorm(schemaA, { key: FORM_A });
+const formB = useVorm(schemaB, { key: FORM_B });
+</script>
+
+<template>
+  <VormProvider :vorm="formA" :context-key="FORM_A">
+    <AutoVorm />
+  </VormProvider>
+
+  <VormProvider :vorm="formB" :context-key="FORM_B">
+    <AutoVorm />
+  </VormProvider>
+</template>
+```
+
+Access specific context in child components:
 
 ```ts
-const contextKey1 = Symbol("Form1");
-const contextKey2 = Symbol("Form2");
+import { useVormContext } from 'vorm-vue';
 
-const schema1: VormSchema = [
-  { name: "firstName", type: "text", label: "First Name" },
-  { name: "email", type: "email", label: "Email" },
-];
-
-const schema2: VormSchema = [
-  { name: "firstName", type: "text", label: "First Name" },
-  { name: "email", type: "email", label: "Email" },
-];
-
-const { formData, validate } = useVorm(schema1, { key: contextKey1 });
+const formA = useVormContext(FORM_A);
+const formB = useVormContext(FORM_B);
 ```
 
+## Manual Form Building
+
+You can build forms without AutoVorm using the context:
+
 ```vue
-<VormProvider :contextKey="contextKey1">
-  <AutoVorm layout="grid" :columns="2" />
+<VormProvider :vorm="vorm">
+  <div class="form">
+    <div class="field">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        v-model="vorm.formData.email"
+        @blur="vorm.validateFieldByName('email')"
+      />
+      <span v-if="vorm.errors.email" class="error">
+        {{ vorm.errors.email }}
+      </span>
+    </div>
+
+    <button @click="handleSubmit">Submit</button>
+  </div>
 </VormProvider>
 ```
 
-`VormProvider` allows you to build fully custom forms without relying on `AutoVorm`:
+## Accessing Context in Children
+
+Child components can access the form context:
 
 ```vue
-<VormProvider :contextKey="contextKey1" v-model="formData">
-  <input v-model="formData.firstName" placeholder="First Name" />
-  <VormInput name="email" placeholder="Email" />
-</VormProvider>
+<script setup lang="ts">
+import { useVormContext } from 'vorm-vue';
+
+const vorm = useVormContext();
+
+// Access reactive state
+const email = computed(() => vorm.formData.email);
+const emailError = computed(() => vorm.errors.email);
+
+// Use methods
+function validateEmail() {
+  vorm.validateFieldByName('email');
+}
+</script>
 ```
-
----
-
-## Notes
-
-- `VormProvider` does not render any form fields itself. Use it in combination with `AutoVorm`, `VormRepeater`, etc.
-- You can nest providers to isolate parts of your form or switch schemas in-place.
-- Every `VormProvider` registers itself via injection and re-provides the context.
-- `AutoVorm` itself don't need `VormProvider` for working. Only for multiple schema using you should use `VormProvider` around `AutoVorm`.
 
 ---
 
 - [AutoVorm](./autovorm.md)
 - [VormRepeater](./repeater.md)
-- [VormSection](./section.md)
-- [Custom Inputs (useVormContext)](../advanced/custom-inputs)
+- [Custom Inputs](../advanced/custom-inputs.md)
 
 ---
 
-> VormProvider is essential infrastructure. It’s invisible in the UI, but it powers all dynamic behavior in Vorm forms.
+> VormProvider is the essential bridge that connects your form context to the component tree. It's invisible in the UI but powers all dynamic behavior in Vorm forms.

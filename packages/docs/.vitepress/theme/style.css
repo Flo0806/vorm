@@ -28,16 +28,6 @@
   color: green; /* deine Wunschfarbe */
 }
 
-.Layout {
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.Layout.name.clip {
-  color: yellow;
-}
-
 .VPButton.brand {
   background-color: #5daa83;
   color: white;
@@ -47,7 +37,19 @@
   color: #5daa83;
 }
 
-/* Slightly increase the width of the content box */
-.VPDoc .content {
-  min-width: 800px;
+/* Fix layout centering on large screens */
+:root {
+  --vp-layout-max-width: 1440px;
+}
+
+/* Center the content area better with sidebar */
+.VPDoc.has-sidebar .container {
+  padding-left: 32px;
+  padding-right: 32px;
+  max-width: 100%;
+}
+
+/* Content area styling */
+.VPDoc .content-container {
+  max-width: 900px;
 }

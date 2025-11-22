@@ -1,127 +1,156 @@
----
-
-sidebar: 'docs'
-title: Basic Concepts
-outline: \[2,3]
----------------
-
 # Basic Concepts
 
-Vorm is built around **schema-driven** form generation with maximum flexibility. This page covers the key concepts that unlock Vorm's power:
-
----
+Vorm is built around **schema-driven** form generation with maximum flexibility. This page covers the key concepts that unlock Vorm's power.
 
 ## Schema-Driven Design
 
-Each form is defined by a single `VormSchema` array.
+Each form is defined by a single `VormSchema` array:
 
 ```ts
+import { type VormSchema } from 'vorm-vue';
+
 const schema: VormSchema = [
-  { name: "email", label: "E-Mail", type: "email" },
+  { name: 'email', label: 'E-Mail', type: 'email' },
   {
-    name: "password",
-    label: "Password",
-    type: "password",
-    validation: [{ rule: "required" }],
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    validation: [{ rule: 'required' }],
   },
 ];
 ```
 
 Each field supports:
 
-- `type`: e.g. `text`, `email`, `checkbox`, `select`, `textarea`, `repeater`, or `custom`
-- `validation`: built-in or custom rules
-- `showIf`: conditionally show based on form values
-- `classes`: styling per input/label/wrapper
+- `type` — e.g. `text`, `email`, `checkbox`, `select`, `textarea`, `repeater`
+- `validation` — built-in or custom rules
+- `showIf` — conditionally show based on form values
+- `classes` — styling per input/label/wrapper
+- `options` — for select fields (static or reactive)
 
----
+## The Form Context
+
+Create a form instance with `useVorm()`:
+
+```ts
+import { useVorm } from 'vorm-vue';
+
+const vorm = useVorm(schema);
+```
+
+This gives you:
+
+- `vorm.formData` — reactive form values
+- `vorm.errors` — validation errors per field
+- `vorm.isValid` — computed validity state
+- `vorm.validateAll()` — validate all fields
+- And many more methods...
+
+## Components
+
+### VormProvider
+
+Connects the form context to child components:
+
+```vue
+<VormProvider :vorm="vorm">
+  <!-- Children can access vorm context -->
+</VormProvider>
+```
+
+### AutoVorm
+
+Automatically renders all fields from schema:
+
+```vue
+<VormProvider :vorm="vorm">
+  <AutoVorm as="form" @submit="handleSubmit" />
+</VormProvider>
+```
 
 ## Styling Forms
 
 Vorm gives you full control over appearance via `classes`, slots, or global layout props.
 
+### Per-Field Classes
+
 ```ts
 {
-  name: "email",
-  label: "E-Mail",
-  type: "email",
+  name: 'email',
+  label: 'E-Mail',
+  type: 'email',
   classes: {
-    input: "border px-2 py-1",
-    outer: "mb-4",
-    help: "text-red-500 text-xs"
+    input: 'border px-2 py-1',
+    outer: 'mb-4',
+    label: 'text-sm font-medium',
+    help: 'text-red-500 text-xs'
   }
 }
 ```
 
-You can also set layout globally:
+### Layout Props
 
 ```vue
 <AutoVorm layout="grid" :columns="2" />
 ```
 
----
+## Wrapper Slots
 
-## Wrappers
-
-Use wrapper slots to wrap inputs in cards, flex rows, grids, etc. The given component is the input control.
+Use wrapper slots to customize field containers:
 
 ### Global Wrapper
 
 ```vue
-<template #wrapper="{ field, content }">
-  <div class="mb-4">
-    <label :for="field.name">{{ field.label }}</label>
-    <component :is="content()" />
-  </div>
-</template>
+<AutoVorm>
+  <template #wrapper="{ field, content, state }">
+    <div class="mb-4">
+      <label>{{ field.label }}</label>
+      <component :is="content" />
+      <span v-if="state.error">{{ state.error }}</span>
+    </div>
+  </template>
+</AutoVorm>
 ```
 
-### Field-Specific
+### Field-Specific Wrapper
 
 ```vue
-<template #wrapper:email="{ content }">
-  <div class="email-wrapper">
-    <component :is="content()" />
-  </div>
-</template>
+<AutoVorm>
+  <template #wrapper:email="{ field, content, state }">
+    <div class="email-field">
+      <component :is="content" />
+    </div>
+  </template>
+</AutoVorm>
 ```
 
-### Multi-Wrappers
+### Multi-Field Wrapper
 
 ```vue
-<template #wrapper:[email,username]="{ content }">
-  <div class="auth-wrapper">
-    <component :is="content()" />
-  </div>
-</template>
+<AutoVorm>
+  <template #wrapper:[email,username]="{ field, content }">
+    <div class="auth-field">
+      <component :is="content" />
+    </div>
+  </template>
+</AutoVorm>
 ```
-
-### Wrapper Inheritance
-
-Enable `inheritWrapper: true` in your schema to let children inherit the closest matching wrapper.
-
-_Example_:
-`email` will then work on `main.sub.email`, too.
-
----
 
 ## Field Slots
 
-Override the rendering of any field:
+Override the entire field rendering:
 
 ```vue
-<template #email="{ field, path, state }">
-  <MyCustomInput v-bind="{ field, path, state }" />
-</template>
+<AutoVorm>
+  <template #email="{ field, state }">
+    <MyCustomInput :field="field" :error="state.error" />
+  </template>
+</AutoVorm>
 ```
-
----
 
 ## Sections & Layout
 
-`VormSection` is a lightweight wrapper component provided for visual grouping and layout clarity. It’s purely optional and carries no logic — its sole purpose is to help you organize your forms visually.
-
-You can use `VormSection` to add titles, padding, borders, or other structural elements around a part of your form:
+`VormSection` provides visual grouping:
 
 ```vue
 <VormSection title="Account Information">
@@ -129,137 +158,76 @@ You can use `VormSection` to add titles, padding, borders, or other structural e
 </VormSection>
 ```
 
-Under the hood, this is equivalent to writing your own wrapper:
+## Context Props
+
+AutoVorm accepts props to control rendering:
+
+- `only` — only render specified fields
+- `excludeRepeaters` — skip repeater fields
+- `layout` — `grid` or `stacked`
+- `columns` — for grid layout
 
 ```vue
-<div class="border p-4 rounded">
-  <h2 class="text-lg font-bold mb-2">Account Information</h2>
-  <AutoVorm :only="['username', 'email', 'password']" />
-</div>
+<AutoVorm :only="['email', 'password']" layout="grid" :columns="2" />
 ```
 
-You’re free to replace VormSection with any container you prefer — including your own custom components. It’s just a convenience.
+## Events
 
----
+AutoVorm emits interaction events:
 
-## Context Awareness
-
-AutoVorm adapts based on its context:
-
-- `only`: Only render selected fields
-- `excludeRepeaters`: Skip nested repeater fields
-- `includeChildren`: Include `contacts[0].email`, etc.
-- `basePath`: Set implicit prefix for all fields
-
-This makes nested or partial forms effortless.
-
----
-
-## Custom Components
-
-You can plug in your own inputs like `VormInput`, which receive:
-
-- `field`: the schema definition
-- `path`: full path, e.g. `contacts[0].email`
-- `modelValue`: entire formData (or parent node)
-- `error`: validation message (if any)
+- `@submit` — form submission
+- `@input` — field value changed
+- `@blur` — field blurred
+- `@validate` — validation triggered
 
 ```vue
-<VormInput :field="field" :path="path" v-model="formData" :error="error" />
+<AutoVorm
+  as="form"
+  @submit="handleSubmit"
+  @input="handleInput"
+  @blur="handleBlur"
+/>
 ```
 
-## VormInput.vue
+## Form State
 
-```vue
-<script setup lang="ts">
-import { useVormContext } from "vorm";
-import { getValueByPath, setValueByPath } from "vorm";
-import type { VormFieldSchema } from "vorm";
-import { computed } from "vue";
-
-const props = defineProps<{
-  field: VormFieldSchema;
-  path: string;
-  modelValue?: any;
-  error?: string | null;
-}>();
-
-const emit = defineEmits<{
-  (e: "update:modelValue", value: any): void;
-}>();
-
-const vorm = useVormContext();
-
-const isBoundToVorm = computed(() => vorm && vorm.formData && props.path);
-
-const model = computed({
-  get() {
-    if (isBoundToVorm.value) {
-      return getValueByPath(vorm!.formData, props.path);
-    }
-    return props.modelValue;
-  },
-  set(val: any) {
-    if (isBoundToVorm.value) {
-      setValueByPath(vorm!.formData, props.path, val);
-    } else {
-      emit("update:modelValue", val);
-    }
-  },
-});
-
-const error = computed(() => {
-  if (isBoundToVorm.value && vorm?.errors) return vorm.errors[props.path];
-  return props.error;
-});
-</script>
-
-<template>
-  <div class="flex flex-col gap-1">
-    <label :for="path">{{ field.label }}</label>
-    <input
-      :id="path"
-      :name="path"
-      :type="field.type"
-      class="border px-2 py-1"
-      v-model="model"
-    />
-    <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
-  </div>
-</template>
-```
-
----
-
-## Events & State
-
-AutoVorm emits events:
-
-- `@input`: value changed
-- `@blur`: field blurred
-- `@validate`: triggered validation
-- `@submit`: form submit
-
-Form state includes:
-
-- `touched`, `dirty`, `valid`, `errors`
-- `initialValue` comparison
-
-You can trigger validation manually:
+Track form state reactively:
 
 ```ts
-vorm.validateFieldByName("email");
-vorm.validate();
+const vorm = useVorm(schema);
+
+// Computed states
+vorm.isValid     // all validated fields pass
+vorm.isDirty     // any field changed
+vorm.isTouched   // any field touched
+
+// Per-field state
+vorm.touched.email   // boolean
+vorm.dirty.email     // boolean
+vorm.errors.email    // string | null
+```
+
+## Validation
+
+Trigger validation programmatically:
+
+```ts
+// Validate single field
+await vorm.validateFieldByName('email');
+
+// Validate all fields
+const isValid = await vorm.validateAll();
 ```
 
 ---
 
-- [Custom Inputs](../advanced/custom-inputs.md)
-- [Field Slots](../advanced/slots.md)
-- [Validation Rules](../core/validation.md)
+## What's Next?
+
+- [Schema Definition](/core/schema) — All field options
+- [Validation](/core/validation) — Rules and async validation
+- [Slots & Wrappers](/advanced/slots) — Full layout control
+- [Custom Inputs](/advanced/custom-inputs) — Build your own components
 
 ---
 
-## Summary
-
-Vorm gives you full control while staying declarative and elegant. Customize deeply — or go fast with defaults. Your form, your rules.
+> Vorm gives you full control while staying declarative and elegant. Customize deeply — or go fast with defaults. Your form, your rules.
