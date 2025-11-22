@@ -4,12 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Vorm is an intuitive form engine for Vue 3 — dynamic, schema-driven, and fully validated. This is a **pnpm workspace** monorepo containing:
+Vorm is an intuitive form engine for Vue 3 — dynamic, schema-driven, and fully validated. **Current version: 1.2.1**
+
+This is a **pnpm workspace** monorepo containing:
 
 - `vorm-vue` (packages/vorm): Core form engine library for Vue 3
-- `vorm-nuxt` (packages/vorm-nuxt): Nuxt module integration
-- `playground` (packages/playground): Demo application for testing
+- `vorm-nuxt` (packages/vorm-nuxt): Nuxt module integration (ready for npm publish)
+- `playground` (packages/playground): Demo application showcasing all features
 - `docs` (packages/docs): VitePress documentation site
+
+## Current Status (November 2025)
+
+### ✅ Completed Features
+- **Performance optimization** - VormField component for isolated reactivity per field
+- **i18n support** - ReactiveString for labels, placeholders, helpText, validation messages
+- **Options system** - Static, reactive, async options for select fields
+- **bindField()** - Easy third-party component integration (Vuetify, PrimeVue, etc.)
+- **Documentation** - Complete overhaul with API reference, guides, examples
+- **Playground** - Redesigned demo app showing all Vorm features
+
+### 📦 Ready for Next Steps
+- **vorm-nuxt** - Module is ready, needs npm publish
+- Consider adding more demos/recipes to docs
 
 ## Development Commands
 
@@ -44,9 +60,6 @@ pnpm --filter vorm-vue test
 # Run tests with coverage
 pnpm --filter vorm-vue test:cov
 
-# Run tests with UI
-pnpm --filter vorm-vue test:ui
-
 # Run tests for vorm-nuxt
 pnpm --filter vorm-nuxt test
 
@@ -68,9 +81,29 @@ pnpm release:local
 
 **Important**: The packages use **Changesets** for version management. `vorm-nuxt` is in the ignore list (`.changeset/config.json`), meaning it doesn't auto-bump via changesets.
 
-### Linting (vorm-nuxt)
+## Deployment Setup
+
+### Git Remotes
+- **origin** (GitHub): `https://github.com/Flo0806/vorm.git` - Main repo, npm releases
+- **gitlab**: `https://gitlab.fh-softdev.de/fh-softdev/vue/composables/vorm.git` - Docs deployment
+
+### Release Workflow
+1. **GitHub** handles npm releases via GitHub Actions (changesets)
+2. **GitLab** handles docs deployment via `.gitlab-ci.yml`:
+   - Push `deploy-to-latest` tag to trigger docs build
+   - Docker image built from `packages/docs/`
+   - Deployed to homeserver
+
+### Push to Both Remotes
 ```bash
-pnpm --filter vorm-nuxt lint
+git push origin main
+git push gitlab main
+
+# Trigger docs rebuild:
+git tag -d deploy-to-latest
+git push gitlab :refs/tags/deploy-to-latest
+git tag deploy-to-latest
+git push gitlab deploy-to-latest
 ```
 
 ## Architecture
@@ -80,103 +113,65 @@ pnpm --filter vorm-nuxt lint
 The library is structured around three key concepts:
 
 1. **Schema System** (`types/schemaTypes.ts`)
-   - `VormSchema`: Array of field definitions that describe form structure
-   - `VormFieldSchema`: Individual field configuration with type, validation, conditional visibility
-   - Field types are strictly typed via `FieldValueTypeMap` (text, number, email, checkbox, select, etc.)
-   - Supports nested fields, repeaters, and conditional fields via `showIf`
+   - `VormSchema`: Array of field definitions
+   - `VormFieldSchema`: Individual field configuration
+   - Supports nested fields, repeaters, conditional fields via `showIf`
 
 2. **Validation Engine** (`core/validatorEngine.ts` + `core/validatorCompiler.ts`)
-   - **Two-phase validation**: Compilation phase (schema → compiled validators) + execution phase (async validation)
+   - Two-phase validation: compilation + async execution
    - Built-in validators: `required`, `minLength`, `maxLength`, `min`, `max`, `pattern`, `between`, `step`, `matchField`
-   - Custom validators supported via `ValidationRule` interface
    - Validation modes: `onInput`, `onBlur`, `onSubmit`
-   - Compiled validators are cached for performance
 
-3. **Context System** (`composables/useVorm.ts` + `core/vormContext.ts`)
-   - `useVorm()`: Creates form context with reactive state (formData, errors, touched, dirty)
-   - `VormContext`: Centralized form state injected via Vue's provide/inject
-   - `VormContextKey`: InjectionKey for type-safe dependency injection
-   - Context tracks: validation state, field options, dirty/touched state, initial values
+3. **Context System** (`composables/useVorm.ts`)
+   - `useVorm()`: Creates form context with reactive state
+   - Tracks: formData, errors, touched, dirty, isValid, isDirty, isTouched
 
 ### Components
 
-- **VormProvider**: Root component that establishes form context via `useVorm()`
-- **AutoVorm**: Auto-generates form UI from schema (experimental/under development)
-- **VormSection**: Groups related fields with optional conditional rendering
-- **VormRepeater**: Dynamic array fields (add/remove field groups)
+- **VormProvider**: Provides form context to children (required wrapper)
+- **AutoVorm**: Auto-generates form UI from schema
+- **VormField**: Internal component for isolated field reactivity (performance)
+- **VormSection**: Groups related fields
+- **VormRepeater**: Dynamic array fields
 
-All components use Vue 3 Composition API and TypeScript.
+### Key Types
+
+```typescript
+// Reactive strings for i18n
+type ReactiveString = string | Ref<string> | ComputedRef<string> | (() => string) | ((ctx: FormContext) => string);
+
+// Form context passed to reactive functions
+interface FormContext {
+  formData: Record<string, any>;
+  readonly errors: Record<string, string | null>;
+  readonly isValid: boolean;
+  readonly isDirty: boolean;
+  readonly isTouched: boolean;
+}
+
+// Options for select fields
+type ReactiveOptions = Option[] | Ref<Option[]> | ComputedRef<Option[]> | (() => Option[]) | (() => Promise<Option[]>);
+```
 
 ### Nuxt Module (vorm-nuxt)
 
 - Auto-imports `useVorm`, `useVormContext`, and types when `autoImports: true`
 - Auto-registers all Vorm components when `components: true`
 - Transpiles `vorm-vue` for SSR compatibility
-- Plugin setup in `runtime/plugin`
+- Works with Nuxt i18n
 
-### Build Configuration
+## Documentation
 
-- **vorm-vue**: Vite library mode with dual exports:
-  - `./index.mjs`: Main library + built-in validators
-  - `./components.mjs`: Components only
-  - CSS bundled in `vorm-vue.css`
-- **Test setup**: Vitest with jsdom environment, coverage via v8
-- **Type generation**: `vite-plugin-dts` with rollup types enabled
+The docs are at `packages/docs/` (VitePress) and include:
 
-## Release Workflow
+- **Getting Started**: Installation, First Form, Basic Concepts
+- **Core Features**: Schema, Validation, Conditions, State
+- **Components**: AutoVorm, VormProvider, VormRepeater, VormSection
+- **Advanced**: i18n, Options, Custom Inputs, Slots, Nested Repeaters
+- **Nuxt Integration**: Setup and usage guide
+- **API Reference**: All types, methods, and interfaces
 
-### GitHub Actions Workflows
-
-1. **version-pr.yml**: Triggered on changeset additions
-   - Creates/updates version PR using `changesets/action`
-   - Updates PR title with package versions
-
-2. **release-vorm-vue.yml**: Triggered when version PR is merged
-   - Checks for absence of changesets (indicating release merge)
-   - Builds vorm-vue
-   - Publishes to npm with provenance
-   - Creates GitHub release
-
-3. **release-vorm-nuxt.yml**: Separate release workflow for Nuxt module
-
-### GitLab CI (.gitlab-ci.yml)
-
-Used for documentation deployment:
-- Manual version tagging (patch/minor/major)
-- Docker image build for docs
-- Deploy to server (pulls `:latest` image)
-
-## Key Patterns
-
-### Path Helpers (`utils/pathHelpers.ts`)
-The library uses dot-notation paths (e.g., `user.address.city`) to access nested form data:
-- `getValueByPath(obj, path)`: Retrieve nested values
-- `setValueByPath(obj, path, value)`: Set nested values
-
-### Conditional Visibility
-Fields support `showIf` conditions:
-- Object comparison: `{ fieldName: expectedValue }`
-- Function: `(formData, path) => boolean`
-- Dependent field: `{ dependsOn: 'field', condition: (value, formData) => boolean }`
-
-### Validation Flow
-1. Schema compilation: `compileField()` creates `CompiledValidator`
-2. Field validation: `validateFieldByName()` uses compiled validators
-3. Async execution: `validateFieldAsync()` runs validation rules sequentially
-4. Error propagation: `affects` field in rules can propagate errors to other fields
-
-## i18n and Reactivity System
-
-Vorm supports comprehensive i18n with reactive labels, placeholders, helpText, and validation messages. Language changes update text WITHOUT re-triggering validation.
-
-**Key Features**:
-- `ReactiveString`: `string | Ref | ComputedRef | (() => string) | ((ctx: FormContext) => string)`
-- Functions without `computed()` wrapper: `label: () => t('key')`
-- Dynamic text based on form state: `placeholder: (ctx) => ctx.formData.username + '@example.com'`
-- Built-in i18n keys for all validators (e.g., `vorm.validation.required`)
-- AutoVorm slots receive resolved strings
-
-**Demo**: `/packages/playground/src/demos/I18nDemo.vue`
+Build docs locally: `cd packages/docs && npx vitepress build`
 
 ## Workspace Structure
 
@@ -187,14 +182,69 @@ vorm/
 │   │   ├── src/
 │   │   │   ├── core/         # Validation engine & context
 │   │   │   ├── composables/  # useVorm, useVormContext
-│   │   │   ├── components/   # VormProvider, AutoVorm, etc.
+│   │   │   ├── components/   # VormProvider, AutoVorm, VormField, etc.
 │   │   │   ├── validation/   # Built-in validators
 │   │   │   ├── types/        # TypeScript definitions
-│   │   │   └── utils/        # Path helpers
+│   │   │   ├── i18n/         # Default translations
+│   │   │   └── utils/        # Path helpers, reactive resolver
 │   │   └── __tests__/        # Vitest tests
 │   ├── vorm-nuxt/     # Nuxt module
 │   ├── playground/    # Demo app (Vite + Vue + TailwindCSS)
 │   └── docs/          # VitePress documentation
 ├── .changeset/        # Changesets configuration
-└── .github/workflows/ # Release automation
+├── .github/workflows/ # GitHub Actions (npm releases)
+└── .gitlab-ci.yml     # GitLab CI (docs deployment)
 ```
+
+## Future Ideas (V2 Brainstorm)
+
+These are potential game-changing features that could differentiate Vorm from FormKit/VeeValidate:
+
+### 1. AI-Powered Schema Generation
+```ts
+const schema = await vorm.generate("Registration form with email, password confirmation, and profile picture")
+// → Generates complete VormSchema with validation rules
+```
+Natural language to form schema. No other library does this.
+
+### 2. Headless Primitives Architecture
+```ts
+// Fully decoupled primitives - like TanStack Form but Vue-native
+const { value, error, validate, touch } = useField('email')
+const { submit, isSubmitting, isValid } = useForm(schema)
+```
+Not just AutoVorm, but true primitives that work anywhere.
+
+### 3. Server-Driven Forms
+```ts
+// Schema comes from server - changes without frontend redeploy
+const vorm = useVorm({ endpoint: '/api/forms/registration' })
+```
+Perfect for CMS, admin panels, dynamic forms.
+
+### 4. Built-in Form Analytics
+```ts
+vorm.analytics.onDropoff((field) => console.log(`Users abandon at: ${field}`))
+vorm.analytics.completionRate // 73%
+vorm.analytics.errorHotspots // ['password': 45% error rate]
+```
+Track where users struggle, no external library needed.
+
+### 5. Visual Schema Builder
+- Drag & drop form editor
+- Exports to VormSchema JSON
+- Open source (FormKit's is commercial)
+
+### 6. Zero-Config Accessibility
+- WCAG 2.1 AA compliance out of the box
+- Screen reader optimized
+- Automatic focus management
+- Live error announcements for assistive technology
+
+### 7. Integrated Drag & Drop for VormRepeater
+```vue
+<VormRepeater name="items" sortable>
+  <!-- Items can be reordered via drag & drop -->
+</VormRepeater>
+```
+Built-in sortable/draggable support without external libraries. Touch-friendly, keyboard accessible.
