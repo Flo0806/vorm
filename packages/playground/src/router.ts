@@ -9,7 +9,6 @@ import ReactiveDemo from "./demos/04-ReactiveDemo.vue";
 import RepeaterDemo from "./demos/05-RepeaterDemo.vue";
 import FormStateDemo from "./demos/06-FormStateDemo.vue";
 import PerformanceDemo from "./demos/07-PerformanceDemo.vue";
-import ComparisonDemo from "./demos/08-ComparisonDemo.vue";
 
 const routes = [
   {
@@ -50,11 +49,6 @@ const routes = [
     path: "/performance",
     component: PerformanceDemo,
     name: "Performance",
-  },
-  {
-    path: "/comparison",
-    component: ComparisonDemo,
-    name: "Comparison",
   },
 ];
 

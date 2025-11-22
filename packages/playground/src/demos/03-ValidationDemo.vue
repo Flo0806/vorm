@@ -4,7 +4,7 @@
  */
 import { ref } from "vue";
 import { useVorm, type VormSchema, minLength, maxLength, min, max, between, step, matchField } from "vorm-vue";
-import { AutoVorm } from "vorm-vue/components";
+import { AutoVorm, VormProvider } from "vorm-vue/components";
 import "./demo-styles.css";
 
 const activeTab = ref<"builtin" | "modes" | "custom" | "cross">("builtin");
@@ -28,25 +28,34 @@ const modesSchema: VormSchema = [
   {
     name: "onInputField",
     type: "text",
-    label: "onInput Mode",
+    label: "Text (onInput)",
     placeholder: "Validates as you type",
-    helpText: "validationMode: 'onInput'",
+    helpText: "validationMode: 'onInput' - min 3 chars",
     validationMode: "onInput",
     validation: [{ rule: "required" }, { rule: minLength(3) }]
   },
   {
-    name: "onBlurField",
+    name: "emailField",
     type: "email",
-    label: "onBlur Mode",
+    label: "Email (onInput)",
+    placeholder: "email@example.com",
+    helpText: "validationMode: 'onInput' - validates while typing!",
+    validationMode: "onInput",
+    validation: [{ rule: "email" }]
+  },
+  {
+    name: "onBlurField",
+    type: "text",
+    label: "Username (onBlur)",
     placeholder: "Validates when you leave",
     helpText: "validationMode: 'onBlur'",
     validationMode: "onBlur",
-    validation: [{ rule: "required" }, { rule: "email" }]
+    validation: [{ rule: "required" }, { rule: minLength(3) }]
   },
   {
     name: "onSubmitField",
     type: "password",
-    label: "onSubmit Mode",
+    label: "Password (onSubmit)",
     placeholder: "Only validates on submit",
     helpText: "validationMode: 'onSubmit'",
     validationMode: "onSubmit",
@@ -86,10 +95,16 @@ const crossFieldSchema: VormSchema = [
     validation: [{ rule: "required" }, { rule: matchField("email"), affects: ["email"] }] }
 ];
 
-const builtinForm = useVorm(builtinSchema, { validationMode: "onBlur" });
-const modesForm = useVorm(modesSchema);
-const customForm = useVorm(customSchema, { validationMode: "onBlur" });
-const crossFieldForm = useVorm(crossFieldSchema, { validationMode: "onBlur" });
+// Form keys for VormProvider
+const builtinKey = Symbol("builtin");
+const modesKey = Symbol("modes");
+const customKey = Symbol("custom");
+const crossFieldKey = Symbol("crossField");
+
+const builtinForm = useVorm(builtinSchema, { validationMode: "onBlur", key: builtinKey });
+const modesForm = useVorm(modesSchema, { key: modesKey });
+const customForm = useVorm(customSchema, { validationMode: "onBlur", key: customKey });
+const crossFieldForm = useVorm(crossFieldSchema, { validationMode: "onBlur", key: crossFieldKey });
 </script>
 
 <template>
@@ -120,7 +135,9 @@ const crossFieldForm = useVorm(crossFieldSchema, { validationMode: "onBlur" });
     <!-- Built-in Validators -->
     <div v-if="activeTab === 'builtin'" class="form-container">
       <h2>Built-in Validators</h2>
-      <AutoVorm />
+      <VormProvider :context-key="builtinKey">
+        <AutoVorm />
+      </VormProvider>
       <div class="btn-group">
         <button class="btn btn-primary" @click="builtinForm.validate()">Validate All</button>
         <button class="btn btn-secondary" @click="builtinForm.resetForm()">Reset</button>
@@ -130,8 +147,10 @@ const crossFieldForm = useVorm(crossFieldSchema, { validationMode: "onBlur" });
     <!-- Validation Modes -->
     <div v-if="activeTab === 'modes'" class="form-container">
       <h2>Validation Modes (per Field)</h2>
-      <p style="color: #64748b; margin-bottom: 1rem;">Each field has its own validationMode in schema!</p>
-      <AutoVorm />
+      <p style="color: #64748b; margin-bottom: 1rem;">Each field has its own validationMode - try typing in Email!</p>
+      <VormProvider :context-key="modesKey">
+        <AutoVorm />
+      </VormProvider>
       <div class="btn-group">
         <button class="btn btn-primary" @click="modesForm.validate()">Validate All</button>
         <button class="btn btn-secondary" @click="modesForm.resetForm()">Reset</button>
@@ -144,7 +163,9 @@ const crossFieldForm = useVorm(crossFieldSchema, { validationMode: "onBlur" });
       <p style="color: #64748b; margin-bottom: 1rem;">
         Custom functions: <code>(value, formData) => errorMessage | null</code>
       </p>
-      <AutoVorm />
+      <VormProvider :context-key="customKey">
+        <AutoVorm />
+      </VormProvider>
       <div class="btn-group">
         <button class="btn btn-primary" @click="customForm.validate()">Validate</button>
         <button class="btn btn-secondary" @click="customForm.resetForm()">Reset</button>
@@ -157,7 +178,9 @@ const crossFieldForm = useVorm(crossFieldSchema, { validationMode: "onBlur" });
       <p style="color: #64748b; margin-bottom: 1rem;">
         <code>matchField('password')</code> + <code>affects: ['password']</code> shows error on both fields
       </p>
-      <AutoVorm />
+      <VormProvider :context-key="crossFieldKey">
+        <AutoVorm />
+      </VormProvider>
       <div class="btn-group">
         <button class="btn btn-primary" @click="crossFieldForm.validate()">Validate</button>
         <button class="btn btn-secondary" @click="crossFieldForm.resetForm()">Reset</button>

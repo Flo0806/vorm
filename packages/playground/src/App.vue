@@ -11,7 +11,6 @@
       <router-link to="/form-state">Form State</router-link>
       <span class="nav-divider">|</span>
       <router-link to="/performance">Performance</router-link>
-      <router-link to="/comparison">Comparison</router-link>
     </div>
   </nav>
   <main class="main-content">
