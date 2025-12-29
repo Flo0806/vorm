@@ -55,7 +55,7 @@ const emit = defineEmits<{
 }>();
 
 const vorm = useVormContext();
-const slots = useSlots();
+const slots = useSlots() as Record<string, ((...args: any[]) => any) | undefined>;
 
 const defaultGridClass = computed(() => {
   if (props.layout === "grid") {

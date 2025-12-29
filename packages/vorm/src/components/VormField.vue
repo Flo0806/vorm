@@ -100,7 +100,9 @@ function emitEvent(type: "input" | "blur" | "validate", value: any, e?: Event) {
     field: fieldConfig.value,
     preventDefault: () => { prevented = true; },
   };
-  emit(type, payload);
+  if (type === "input") emit("input", payload);
+  else if (type === "blur") emit("blur", payload);
+  else emit("validate", payload);
   return !prevented;
 }
 
@@ -150,7 +152,7 @@ function renderInput(): VNode | null {
   const attrs = {
     id: `vorm-${props.fieldName}`,
     name: props.fieldName,
-    class: config.classes?.input ?? `vorm-${config.type}`,
+    class: [`vorm-${config.type}`, config.classes?.input].filter(Boolean).join(' '),
     placeholder: resolved.value.placeholder || undefined,
     disabled: resolved.value.disabled || undefined,
     onInput,
@@ -195,11 +197,11 @@ defineExpose({ slotProps, renderInput });
   <component v-if="wrapperSlot" :is="() => wrapperSlot!(slotProps)" />
 
   <!-- Default rendering (no wrapper slot) -->
-  <div v-else :class="['vorm-group', fieldWrapperClass, state.classes]">
+  <div v-else :class="['vorm-group', fieldWrapperClass, fieldConfig.classes?.outer, state.classes]">
     <label
       v-if="resolved.label && fieldConfig.type !== 'hidden'"
       :for="'vorm-' + fieldName"
-      class="vorm-label"
+      :class="['vorm-label', fieldConfig.classes?.label]"
     >
       {{ resolved.label }}
     </label>
@@ -208,11 +210,11 @@ defineExpose({ slotProps, renderInput });
       <component :is="renderInput" />
     </slot>
 
-    <span v-if="state.error && fieldConfig.showError !== false" class="vorm-error">
+    <span v-if="state.error && fieldConfig.showError !== false" :class="['vorm-error', fieldConfig.classes?.help]">
       {{ state.error }}
     </span>
 
-    <span v-if="resolved.helpText && !state.error" class="vorm-help">
+    <span v-if="resolved.helpText && !state.error" :class="['vorm-help', fieldConfig.classes?.help]">
       {{ resolved.helpText }}
     </span>
   </div>
