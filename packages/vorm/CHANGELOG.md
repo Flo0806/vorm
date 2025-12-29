@@ -1,5 +1,11 @@
 # vorm-vue
 
+## 1.2.2
+
+### Patch Changes
+
+- [#48](https://github.com/Flo0806/vorm/pull/48) [`aeb8750`](https://github.com/Flo0806/vorm/commit/aeb87507b70c983604c15397c5daaded48f9d666) Thanks [@Flo0806](https://github.com/Flo0806)! - Fix schema `classes` property not being applied to label, help, and outer elements in VormField component. Previously only `classes.input` was working, now all class properties (`outer`, `label`, `input`, `help`) are properly applied alongside the default vorm-\* classes.
+
 ## 1.2.1
 
 ### Patch Changes
