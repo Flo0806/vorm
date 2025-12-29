@@ -1,5 +1,11 @@
 # vorm-vue
 
+## 1.2.3
+
+### Patch Changes
+
+- [#50](https://github.com/Flo0806/vorm/pull/50) [`f73fdd4`](https://github.com/Flo0806/vorm/commit/f73fdd4236494023a020fc978275961e237211d3) Thanks [@Flo0806](https://github.com/Flo0806)! - Fix validation for fields inside repeaters. `validateFieldByName` now correctly validates nested fields like `projects[0].url` by using the expanded schema. Added tests for repeater and nested repeater validation.
+
 ## 1.2.2
 
 ### Patch Changes
