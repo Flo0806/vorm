@@ -7,6 +7,7 @@ import {
   isValidatorFn,
 } from "./ruleUtils.js";
 import { resolveMessage } from "../i18n/messageResolver.js";
+import { getValueByPath } from "../utils/pathHelpers.js";
 
 /**
  * Internal validation function that returns ErrorData for reactive error messages
@@ -17,7 +18,7 @@ export async function validateFieldAsyncInternal(
   formData: Record<string, any>,
   allErrors: Record<string, ErrorData | null>
 ): Promise<ErrorData | null> {
-  const value = formData[field.name];
+  const value = getValueByPath(formData, field.name);
   if (!field.validation) {
     allErrors[field.name] = null;
     return null;
@@ -50,7 +51,7 @@ export async function validateFieldAsync(
   formData: Record<string, any>,
   allErrors: Record<string, string | null>
 ): Promise<string | null> {
-  const value = formData[field.name];
+  const value = getValueByPath(formData, field.name);
   if (!field.validation) {
     allErrors[field.name] = null;
     return null;

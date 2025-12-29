@@ -10,6 +10,7 @@ import {
 } from "../core/validatorCompiler.js";
 import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
 import { isFieldInSchema } from "../utils/isFieldInSchema.js";
+import { expandSchema } from "../utils/expandSchema.js";
 import { resolveMessage } from "../i18n/messageResolver.js";
 import { resolveReactiveOptions, resolveReactiveBoolean } from "../utils/reactiveResolver.js";
 
@@ -441,7 +442,9 @@ export function useVorm(
    * @returns A promise that resolves when the field is validated
    */
   async function validateFieldByName(fieldName: string): Promise<void> {
-    const field = schema.find((f) => f.name === fieldName);
+    // Use expandSchema to find fields in repeaters (e.g., "projects[0].url")
+    const expandedSchema = expandSchema(schema, formData);
+    const field = expandedSchema.find((f) => f.name === fieldName);
     if (field) {
       touched[field.name] = true;
       const error = await validateFieldAsyncInternal(field, formData, errorData);
@@ -454,7 +457,7 @@ export function useVorm(
         const affects = compiledAffects.get(fieldName);
         if (affects?.length) {
           for (const dep of affects) {
-            const depField = schema.find((f) => f.name === dep);
+            const depField = expandedSchema.find((f) => f.name === dep);
             if (depField) {
               const depError = await validateFieldAsyncInternal(depField, formData, errorData);
               errorData[dep] = depError;

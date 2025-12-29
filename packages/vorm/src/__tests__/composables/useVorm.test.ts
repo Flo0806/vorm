@@ -124,4 +124,144 @@ describe("useVorm", () => {
       expect(vorm.isValid.value).toBe(true);
     });
   });
+
+  describe("repeater validation", () => {
+    it("should validate fields inside repeaters by path", async () => {
+      const repeaterSchema: VormSchema = [
+        {
+          name: "projects",
+          type: "repeater",
+          label: "Projects",
+          fields: [
+            {
+              name: "name",
+              type: "text",
+              label: "Project Name",
+              validation: [{ rule: "required", message: "Name is required" }],
+            },
+            {
+              name: "url",
+              type: "text",
+              label: "URL",
+              validation: [
+                {
+                  rule: (value: string) => {
+                    if (!value || value.startsWith("http")) return null;
+                    return "URL must start with http";
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const repeaterVorm = useVorm(repeaterSchema);
+
+      // Add a project item
+      repeaterVorm.addRepeaterItem("projects", { name: "", url: "invalid-url" });
+
+      // Validate the nested field by path (e.g., "projects[0].name")
+      await repeaterVorm.validateFieldByName("projects[0].name");
+      expect(repeaterVorm.errors["projects[0].name"]).toBe("Name is required");
+
+      // Validate URL field
+      await repeaterVorm.validateFieldByName("projects[0].url");
+      expect(repeaterVorm.errors["projects[0].url"]).toBe("URL must start with http");
+
+      // Fix the values and re-validate
+      repeaterVorm.formData.projects[0].name = "My Project";
+      repeaterVorm.formData.projects[0].url = "https://example.com";
+
+      await repeaterVorm.validateFieldByName("projects[0].name");
+      await repeaterVorm.validateFieldByName("projects[0].url");
+
+      expect(repeaterVorm.errors["projects[0].name"]).toBeNull();
+      expect(repeaterVorm.errors["projects[0].url"]).toBeNull();
+    });
+
+    it("should validate async validators in repeater fields", async () => {
+      const asyncSchema: VormSchema = [
+        {
+          name: "items",
+          type: "repeater",
+          label: "Items",
+          fields: [
+            {
+              name: "code",
+              type: "text",
+              label: "Code",
+              validation: [
+                {
+                  rule: async (value: string) => {
+                    await new Promise((r) => setTimeout(r, 10));
+                    if (value === "VALID") return null;
+                    return "Invalid code";
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const asyncVorm = useVorm(asyncSchema);
+      asyncVorm.addRepeaterItem("items", { code: "WRONG" });
+
+      await asyncVorm.validateFieldByName("items[0].code");
+      expect(asyncVorm.errors["items[0].code"]).toBe("Invalid code");
+
+      asyncVorm.formData.items[0].code = "VALID";
+      await asyncVorm.validateFieldByName("items[0].code");
+      expect(asyncVorm.errors["items[0].code"]).toBeNull();
+    });
+
+    it("should validate nested repeaters", async () => {
+      const nestedSchema: VormSchema = [
+        {
+          name: "teams",
+          type: "repeater",
+          label: "Teams",
+          fields: [
+            {
+              name: "teamName",
+              type: "text",
+              label: "Team Name",
+              validation: [{ rule: "required", message: "Team name required" }],
+            },
+            {
+              name: "members",
+              type: "repeater",
+              label: "Members",
+              fields: [
+                {
+                  name: "memberName",
+                  type: "text",
+                  label: "Member Name",
+                  validation: [{ rule: "required", message: "Member name required" }],
+                },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const nestedVorm = useVorm(nestedSchema);
+
+      // Add a team with a member
+      nestedVorm.addRepeaterItem("teams", {
+        teamName: "",
+        members: [{ memberName: "" }],
+      });
+
+      // Validate nested repeater field: teams[0].members[0].memberName
+      await nestedVorm.validateFieldByName("teams[0].members[0].memberName");
+      expect(nestedVorm.errors["teams[0].members[0].memberName"]).toBe("Member name required");
+
+      // Fix and re-validate
+      nestedVorm.formData.teams[0].members[0].memberName = "John";
+      await nestedVorm.validateFieldByName("teams[0].members[0].memberName");
+      expect(nestedVorm.errors["teams[0].members[0].memberName"]).toBeNull();
+    });
+  });
 });
