@@ -48,10 +48,9 @@ The `useVorm` composable returns an object with the following properties and met
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `validateAll` | `() => Promise<boolean>` | Validate all fields, returns validity |
+| `validate` | `() => Promise<boolean>` | Validate all fields (incl. repeaters), returns validity |
 | `validateFieldByName` | `(name: string) => Promise<void>` | Validate a single field |
-| `clearErrors` | `() => void` | Clear all validation errors |
-| `clearError` | `(name: string) => void` | Clear error for a specific field |
+| `getErrors` | `() => Record<string, string \| null>` | Get a copy of all errors |
 
 #### Field Methods
 
@@ -65,7 +64,7 @@ The `useVorm` composable returns an object with the following properties and met
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `addRepeaterItem` | `(path: string, item?: any, index?: number) => void` | Add item to repeater |
+| `addRepeaterItem` | `(path: string, item: any, index?: number) => void` | Add item to repeater (item is **required**) |
 | `removeRepeaterItem` | `(path: string, index: number) => void` | Remove item from repeater |
 | `moveRepeaterItem` | `(path: string, from: number, to: number) => void` | Reorder repeater items |
 | `clearRepeater` | `(path: string) => void` | Remove all items from repeater |
@@ -75,7 +74,23 @@ The `useVorm` composable returns an object with the following properties and met
 | Property/Method | Type | Description |
 |-----------------|------|-------------|
 | `schema` | `VormSchema` | The original schema |
-| `reset` | `() => void` | Reset form to initial values |
+| `resetForm` | `() => void` | Reset form to initial values |
+| `touchAll` | `() => void` | Mark all fields as touched |
+| `getTouched` | `() => Record<string, boolean>` | Get a copy of touched state |
+| `getDirty` | `() => Record<string, boolean>` | Get a copy of dirty state |
+
+::: warning ComputedRef in Templates
+`isValid`, `isDirty`, and `isTouched` are `ComputedRef` values. In templates, you need `.value` unless you destructure them:
+
+```ts
+// Option 1: Use .value in template
+:disabled="!vorm.isValid.value"
+
+// Option 2: Destructure for auto-unwrapping
+const { isValid } = vorm
+// Then in template: :disabled="!isValid"
+```
+:::
 
 ---
 

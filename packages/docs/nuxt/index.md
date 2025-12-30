@@ -113,7 +113,7 @@ const schema: VormSchema = [
 const vorm = useVorm(schema);
 
 async function handleSubmit() {
-  const isValid = await vorm.validateAll();
+  const isValid = await vorm.validate();
   if (isValid) {
     console.log('Form data:', vorm.formData);
   }

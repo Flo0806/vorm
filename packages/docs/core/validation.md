@@ -275,11 +275,11 @@ const vorm = useVorm(schema);
 // Validate single field
 await vorm.validateFieldByName('email');
 
-// Validate all fields
-const isValid = await vorm.validateAll();
+// Validate all fields (including repeater subfields)
+const isValid = await vorm.validate();
 
-// Check validity without triggering validation
-const isCurrentlyValid = vorm.isValid;
+// Check validity (ComputedRef - use .value in templates)
+const isCurrentlyValid = vorm.isValid.value;
 ```
 
 ## Accessing Errors
@@ -291,14 +291,51 @@ console.log(vorm.errors);  // { email: 'Invalid email', username: null }
 // Get single error
 console.log(vorm.errors.email);  // 'Invalid email' or null
 
-// Clear errors
-vorm.clearErrors();
-vorm.clearError('email');
+// Get a copy of errors
+const errorsCopy = vorm.getErrors();
+
+// Clear single error
+vorm.errors.email = null;
+
+// Reset form (clears all errors and values)
+vorm.resetForm();
 ```
+
+## Conditional Fields and Validation
+
+When a field has a `showIf` condition that evaluates to `false`, the field is **not validated** and won't block form submission.
+
+```ts
+const schema: VormSchema = [
+  {
+    name: 'role',
+    type: 'select',
+    options: [
+      { label: 'Personal', value: 'personal' },
+      { label: 'Business', value: 'business' },
+    ],
+  },
+  {
+    name: 'companyName',
+    type: 'text',
+    showIf: { role: 'business' },  // Only visible when role is 'business'
+    validation: [{ rule: 'required' }],
+  },
+];
+```
+
+**Behavior:**
+- When `role` is `'personal'`: `companyName` is hidden and **not validated**
+- When `role` is `'business'`: `companyName` is visible and validation applies
+- Errors are automatically cleared when a field becomes hidden
+- `isValid` only considers visible fields
+
+This allows you to create complex conditional forms without worrying about hidden fields blocking submission.
 
 ---
 
 > Validation is core to Vorm's architecture. Every rule is tracked, can be programmatically triggered, and integrates seamlessly with error display, repeater logic, and slot behavior.
 
 - [Schema Definition](./schema.md)
+- [Conditional Rendering](./conditions.md)
 - [Internationalization](../advanced/i18n.md)

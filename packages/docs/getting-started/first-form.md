@@ -32,7 +32,7 @@ const schema: VormSchema = [
 const vorm = useVorm(schema);
 
 async function handleSubmit() {
-  const isValid = await vorm.validateAll();
+  const isValid = await vorm.validate();
   if (isValid) {
     console.log('Form data:', vorm.formData);
     alert('Form submitted successfully!');
@@ -83,8 +83,8 @@ const vorm = useVorm(schema);
 This gives you access to:
 - `vorm.formData` — reactive form values
 - `vorm.errors` — validation errors per field
-- `vorm.validateAll()` — validate all fields (async)
-- `vorm.isValid` — computed validity state
+- `vorm.validate()` — validate all fields (async)
+- `vorm.isValid` — computed validity state (`ComputedRef`, use `.value` in templates)
 - And much more...
 
 ### 3. Render the form

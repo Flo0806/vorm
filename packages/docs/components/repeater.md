@@ -39,7 +39,7 @@ const vorm = useVorm(schema);
       </template>
     </VormRepeater>
 
-    <button @click="vorm.addRepeaterItem('contacts')">
+    <button @click="vorm.addRepeaterItem('contacts', {})">
       Add Contact
     </button>
   </VormProvider>
@@ -120,7 +120,7 @@ VormRepeater supports nesting for complex structures:
         </template>
       </VormRepeater>
 
-      <button @click="vorm.addRepeaterItem(`${deptPath}.employees`)">
+      <button @click="vorm.addRepeaterItem(`${deptPath}.employees`, {})">
         Add Employee
       </button>
     </div>
@@ -132,13 +132,15 @@ VormRepeater supports nesting for complex structures:
 
 Use these methods from the vorm context:
 
-### `addRepeaterItem(path, item?, index?)`
+### `addRepeaterItem(path, item, index?)`
+
+The `item` parameter is **required**:
 
 ```ts
 // Add empty item at end
-vorm.addRepeaterItem('contacts');
+vorm.addRepeaterItem('contacts', {});
 
-// Add with initial data
+// Add with initial data (recommended)
 vorm.addRepeaterItem('contacts', { name: 'John', email: 'john@example.com' });
 
 // Add at specific index
@@ -222,7 +224,7 @@ const schema: VormSchema = [
 const vorm = useVorm(schema);
 
 async function handleSubmit() {
-  const isValid = await vorm.validateAll();
+  const isValid = await vorm.validate();
   if (isValid) {
     console.log('Team:', vorm.formData);
   }
@@ -246,7 +248,7 @@ async function handleSubmit() {
       </template>
     </VormRepeater>
 
-    <button type="button" @click="vorm.addRepeaterItem('members')">
+    <button type="button" @click="vorm.addRepeaterItem('members', {})">
       Add Member
     </button>
 

@@ -42,8 +42,8 @@ This gives you:
 
 - `vorm.formData` — reactive form values
 - `vorm.errors` — validation errors per field
-- `vorm.isValid` — computed validity state
-- `vorm.validateAll()` — validate all fields
+- `vorm.isValid` — computed validity state (`ComputedRef`, use `.value` in templates)
+- `vorm.validate()` — validate all fields
 - And many more methods...
 
 ## Components
@@ -216,7 +216,7 @@ Trigger validation programmatically:
 await vorm.validateFieldByName('email');
 
 // Validate all fields
-const isValid = await vorm.validateAll();
+const isValid = await vorm.validate();
 ```
 
 ---

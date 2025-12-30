@@ -35,15 +35,32 @@ vorm.isDirty           // ComputedRef<boolean> - any field is dirty
 vorm.isTouched         // ComputedRef<boolean> - any field is touched
 ```
 
+::: warning ComputedRef in Templates
+These are `ComputedRef` values, not plain booleans. In templates you need `.value`:
+
+```vue
+<!-- Option 1: Use .value -->
+<button :disabled="!vorm.isValid.value">Submit</button>
+
+<!-- Option 2: Destructure for auto-unwrapping -->
+<script setup>
+const { isValid } = vorm
+</script>
+<button :disabled="!isValid">Submit</button>
+```
+
+This is standard Vue behavior for composables returning refs in objects (same as VueUse, TanStack Query, etc.).
+:::
+
 ## Validation Methods
 
-### `validateAll()`
+### `validate()`
 
-Validates all fields. Returns `true` if all pass:
+Validates all fields including repeater subfields. Returns `true` if all pass:
 
 ```ts
 async function handleSubmit() {
-  const isValid = await vorm.validateAll();
+  const isValid = await vorm.validate();
   if (isValid) {
     // Submit form
   }
@@ -132,28 +149,29 @@ vorm.resetForm();
 
 ## Error Methods
 
-### `clearErrors()`
-
-Clears all validation errors:
-
-```ts
-vorm.clearErrors();
-```
-
-### `clearError(name)`
-
-Clears error for a specific field:
-
-```ts
-vorm.clearError('email');
-```
-
 ### `getErrors()`
 
 Returns a copy of current errors:
 
 ```ts
 const errors = vorm.getErrors();
+```
+
+### Clearing Errors
+
+To clear errors, set them directly on the `errors` object:
+
+```ts
+// Clear single error
+vorm.errors.email = null;
+
+// Clear all errors
+Object.keys(vorm.errors).forEach(key => {
+  vorm.errors[key] = null;
+});
+
+// Or use resetForm() to reset everything
+vorm.resetForm();
 ```
 
 ## Options Methods
@@ -191,14 +209,24 @@ Usage with Vuetify:
 
 ## Repeater Methods
 
-### `addRepeaterItem(path, item?, index?)`
+### `addRepeaterItem(path, item, index?)`
 
-Add item to repeater (default: end):
+Add item to repeater. The `item` parameter is **required**:
 
 ```ts
+// Add with initial data structure (recommended)
 vorm.addRepeaterItem('contacts', { name: '', email: '' });
-vorm.addRepeaterItem('contacts', { name: '' }, 0);  // Insert at index 0
+
+// Add empty object
+vorm.addRepeaterItem('contacts', {});
+
+// Insert at specific index
+vorm.addRepeaterItem('contacts', { name: '' }, 0);
 ```
+
+::: warning Required Parameter
+Unlike some form libraries, `item` is **required**. Always pass at least an empty object `{}`.
+:::
 
 ### `removeRepeaterItem(path, index)`
 
@@ -268,7 +296,7 @@ const schema: VormSchema = [
 const vorm = useVorm(schema, { validationMode: 'onBlur' });
 
 async function handleSubmit() {
-  const isValid = await vorm.validateAll();
+  const isValid = await vorm.validate();
   if (isValid) {
     console.log('Submitting:', vorm.formData);
   }

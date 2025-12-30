@@ -59,7 +59,7 @@ const vorm = useVorm(schema);
             </template>
           </VormRepeater>
 
-          <button @click="vorm.addRepeaterItem(`${fullName}.employees`)">
+          <button @click="vorm.addRepeaterItem(`${fullName}.employees`, {})">
             Add Employee
           </button>
           <button @click="vorm.removeRepeaterItem('departments', index)">
@@ -69,7 +69,7 @@ const vorm = useVorm(schema);
       </template>
     </VormRepeater>
 
-    <button @click="vorm.addRepeaterItem('departments')">
+    <button @click="vorm.addRepeaterItem('departments', {})">
       Add Department
     </button>
   </VormProvider>
@@ -102,8 +102,8 @@ For complete control, render fields manually using the `data` slot prop:
             <label>Email</label>
             <input v-model="empData.email" type="email" />
 
-            <span v-if="vorm.errors.value[`${empPath}.email`]" class="error">
-              {{ vorm.errors.value[`${empPath}.email`] }}
+            <span v-if="vorm.errors[`${empPath}.email`]" class="error">
+              {{ vorm.errors[`${empPath}.email`] }}
             </span>
 
             <button @click="vorm.removeRepeaterItem(`${fullName}.employees`, empIndex)">
@@ -113,7 +113,7 @@ For complete control, render fields manually using the `data` slot prop:
         </template>
       </VormRepeater>
 
-      <button @click="vorm.addRepeaterItem(`${fullName}.employees`)">
+      <button @click="vorm.addRepeaterItem(`${fullName}.employees`, {})">
         Add Employee
       </button>
     </div>
@@ -237,7 +237,7 @@ Vorm handles arbitrarily deep nesting:
 - Always use `:exclude-repeaters="true"` on inner AutoVorm to prevent infinite loops
 - Use template string interpolation for dynamic paths: `` `${fullName}.employees` ``
 - The `indexes` prop helps track position in deeply nested structures
-- Access errors with full path: `vorm.errors.value['departments[0].employees[1].email']`
+- Access errors with full path: `vorm.errors['departments[0].employees[1].email']`
 
 ---
 
