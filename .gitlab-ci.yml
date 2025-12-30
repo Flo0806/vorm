@@ -70,7 +70,7 @@ create_new_version_tag:
 # --- Stage 2: Build Docker image (triggered by tags) ---
 build_image:
   stage: build
-  image: docker:24.0.7
+  image: docker:27
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
   rules:
