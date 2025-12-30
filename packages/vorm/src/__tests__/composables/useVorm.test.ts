@@ -263,6 +263,128 @@ describe("useVorm", () => {
       await nestedVorm.validateFieldByName("teams[0].members[0].memberName");
       expect(nestedVorm.errors["teams[0].members[0].memberName"]).toBeNull();
     });
+
+    it("should validate repeater fields with validate() - not just validateFieldByName", async () => {
+      const schema: VormSchema = [
+        {
+          name: "projects",
+          type: "repeater",
+          label: "Projects",
+          fields: [
+            {
+              name: "name",
+              type: "text",
+              label: "Project Name",
+              validation: [{ rule: "required", message: "Project name required" }],
+            },
+          ],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+
+      // Add a project with empty name
+      vorm.addRepeaterItem("projects", { name: "" });
+
+      // validate() should catch the error in repeater subfield
+      const isValid = await vorm.validate();
+
+      expect(isValid).toBe(false);
+      expect(vorm.errors["projects[0].name"]).toBe("Project name required");
+    });
+
+    it("should return true from validate() when all repeater fields are valid", async () => {
+      const schema: VormSchema = [
+        {
+          name: "projects",
+          type: "repeater",
+          label: "Projects",
+          fields: [
+            {
+              name: "name",
+              type: "text",
+              label: "Project Name",
+              validation: [{ rule: "required", message: "Project name required" }],
+            },
+          ],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+
+      // Add a project with valid name
+      vorm.addRepeaterItem("projects", { name: "My Project" });
+
+      const isValid = await vorm.validate();
+
+      expect(isValid).toBe(true);
+      expect(vorm.errors["projects[0].name"]).toBeNull();
+    });
+
+    it("should validate multiple repeater items with validate()", async () => {
+      const schema: VormSchema = [
+        {
+          name: "items",
+          type: "repeater",
+          label: "Items",
+          fields: [
+            {
+              name: "title",
+              type: "text",
+              label: "Title",
+              validation: [{ rule: "required", message: "Title required" }],
+            },
+          ],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+
+      // Add multiple items - some valid, some invalid
+      vorm.addRepeaterItem("items", { title: "Valid" });
+      vorm.addRepeaterItem("items", { title: "" }); // Invalid
+      vorm.addRepeaterItem("items", { title: "Also Valid" });
+
+      const isValid = await vorm.validate();
+
+      expect(isValid).toBe(false);
+      expect(vorm.errors["items[0].title"]).toBeNull();
+      expect(vorm.errors["items[1].title"]).toBe("Title required");
+      expect(vorm.errors["items[2].title"]).toBeNull();
+    });
+
+    it("isValid should be false when repeater fields have errors", async () => {
+      const schema: VormSchema = [
+        {
+          name: "contacts",
+          type: "repeater",
+          label: "Contacts",
+          fields: [
+            {
+              name: "email",
+              type: "text",
+              label: "Email",
+              validation: [{ rule: "required", message: "Email required" }],
+            },
+          ],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.addRepeaterItem("contacts", { email: "" });
+
+      // Before validation
+      expect(vorm.isValid.value).toBe(false);
+
+      // After validation with invalid data
+      await vorm.validate();
+      expect(vorm.isValid.value).toBe(false);
+
+      // Fix the data and re-validate
+      vorm.formData.contacts[0].email = "test@example.com";
+      await vorm.validate();
+      expect(vorm.isValid.value).toBe(true);
+    });
   });
 
   describe("conditional field validation (showIf)", () => {
