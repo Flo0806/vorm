@@ -1,5 +1,15 @@
 # vorm-vue
 
+## 1.2.4
+
+### Patch Changes
+
+- [#52](https://github.com/Flo0806/vorm/pull/52) [`13d340d`](https://github.com/Flo0806/vorm/commit/13d340d3d00f731d3ea2541e55fd0285f71258aa) Thanks [@Flo0806](https://github.com/Flo0806)! - fix: skip validation for hidden fields (showIf condition false)
+  - Hidden fields are no longer validated and don't block form submission
+  - Errors are automatically cleared when a field becomes hidden
+  - isValid computed only considers visible fields
+  - Added resolveRelativePath to pathHelpers for shared use
+
 ## 1.2.3
 
 ### Patch Changes
