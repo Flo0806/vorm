@@ -1,5 +1,14 @@
 # vorm-vue
 
+## 1.2.5
+
+### Patch Changes
+
+- [#54](https://github.com/Flo0806/vorm/pull/54) [`9668bec`](https://github.com/Flo0806/vorm/commit/9668bec0077c0a8c328fa6be77efc5a523495e95) Thanks [@Flo0806](https://github.com/Flo0806)! - fix: validate() now validates repeater subfields correctly
+  - validate() uses expandSchema to include repeater fields (e.g., projects[0].name)
+  - isValid computed now considers repeater subfields
+  - Added tests for validate() with repeater fields
+
 ## 1.2.4
 
 ### Patch Changes
