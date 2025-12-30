@@ -179,9 +179,11 @@ export function useVorm(
 
   // Computed form-level flags for better DX
   // Only considers visible fields (fields whose showIf condition returns true)
+  // Includes repeater subfields via expandSchema
   isValid = computed(() => {
-    // Get only visible field names
-    const visibleFieldNames = schema
+    // Get all visible field names including repeater subfields
+    const expandedSchema = expandSchema(schema, formData);
+    const visibleFieldNames = expandedSchema
       .filter((field) => isFieldVisible(field, formData))
       .map((field) => field.name);
 
@@ -430,6 +432,7 @@ export function useVorm(
   /**
    * Complete form validation function
    * Only validates visible fields (fields whose showIf condition returns true)
+   * Validates all fields including repeater subfields via expandSchema
    */
   async function validate(): Promise<boolean> {
     const raw = toRaw(formData);
@@ -438,7 +441,10 @@ export function useVorm(
     const tempValidated: Record<string, boolean> = {};
     const tempTouched: Record<string, boolean> = {};
 
-    const validations = schema.map(async (field) => {
+    // Use expandSchema to include repeater subfields (e.g., "projects[0].name")
+    const expandedSchema = expandSchema(schema, raw);
+
+    const validations = expandedSchema.map(async (field) => {
       const name = field.name;
 
       // Skip validation for hidden fields
@@ -449,8 +455,8 @@ export function useVorm(
         return true;
       }
 
-      const value = raw[name];
-      const validators = compiledValidators.get(name) || [];
+      const value = getValueByPath(raw, name);
+      const validators = compiledValidators.get(name) || compileField(field);
 
       tempTouched[name] = true;
 
