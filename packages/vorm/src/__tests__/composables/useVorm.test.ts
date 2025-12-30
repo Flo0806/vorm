@@ -264,4 +264,280 @@ describe("useVorm", () => {
       expect(nestedVorm.errors["teams[0].members[0].memberName"]).toBeNull();
     });
   });
+
+  describe("conditional field validation (showIf)", () => {
+    it("should skip validation for hidden fields (simple object match)", async () => {
+      const schema: VormSchema = [
+        {
+          name: "role",
+          type: "select",
+          label: "Role",
+          validation: [{ rule: "required" }],
+        },
+        {
+          name: "companyName",
+          type: "text",
+          label: "Company Name",
+          showIf: { role: "business" },
+          validation: [{ rule: "required", message: "Company name required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.formData.role = "personal"; // companyName should be hidden
+
+      const isValid = await vorm.validate();
+
+      // Should be valid because companyName is hidden and not validated
+      expect(isValid).toBe(true);
+      expect(vorm.errors.companyName).toBeNull();
+    });
+
+    it("should validate visible fields (simple object match)", async () => {
+      const schema: VormSchema = [
+        {
+          name: "role",
+          type: "select",
+          label: "Role",
+          validation: [{ rule: "required" }],
+        },
+        {
+          name: "companyName",
+          type: "text",
+          label: "Company Name",
+          showIf: { role: "business" },
+          validation: [{ rule: "required", message: "Company name required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.formData.role = "business"; // companyName should be visible
+
+      const isValid = await vorm.validate();
+
+      // Should be invalid because companyName is visible but empty
+      expect(isValid).toBe(false);
+      expect(vorm.errors.companyName).toBe("Company name required");
+    });
+
+    it("should skip validation for hidden fields (function condition)", async () => {
+      const schema: VormSchema = [
+        {
+          name: "hasDiscount",
+          type: "checkbox",
+          label: "Has Discount",
+        },
+        {
+          name: "discountCode",
+          type: "text",
+          label: "Discount Code",
+          showIf: (formData) => formData.hasDiscount === true,
+          validation: [{ rule: "required", message: "Discount code required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.formData.hasDiscount = false; // discountCode should be hidden
+
+      const isValid = await vorm.validate();
+
+      expect(isValid).toBe(true);
+      expect(vorm.errors.discountCode).toBeNull();
+    });
+
+    it("should validate visible fields (function condition)", async () => {
+      const schema: VormSchema = [
+        {
+          name: "hasDiscount",
+          type: "checkbox",
+          label: "Has Discount",
+        },
+        {
+          name: "discountCode",
+          type: "text",
+          label: "Discount Code",
+          showIf: (formData) => formData.hasDiscount === true,
+          validation: [{ rule: "required", message: "Discount code required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.formData.hasDiscount = true; // discountCode should be visible
+
+      const isValid = await vorm.validate();
+
+      expect(isValid).toBe(false);
+      expect(vorm.errors.discountCode).toBe("Discount code required");
+    });
+
+    it("should clear errors when a field becomes hidden", async () => {
+      const schema: VormSchema = [
+        {
+          name: "role",
+          type: "select",
+          label: "Role",
+          validation: [{ rule: "required" }],
+        },
+        {
+          name: "companyName",
+          type: "text",
+          label: "Company Name",
+          showIf: { role: "business" },
+          validation: [{ rule: "required", message: "Company name required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+
+      // First, show the field and validate (should have error)
+      vorm.formData.role = "business";
+      await vorm.validate();
+      expect(vorm.errors.companyName).toBe("Company name required");
+
+      // Now hide the field by changing role
+      vorm.formData.role = "personal";
+
+      // Wait for the watcher to clear errors
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Error should be cleared
+      expect(vorm.errors.companyName).toBeNull();
+    });
+
+    it("should not block form submission with hidden field errors", async () => {
+      const schema: VormSchema = [
+        {
+          name: "userType",
+          type: "select",
+          label: "User Type",
+          validation: [{ rule: "required" }],
+        },
+        {
+          name: "githubUsername",
+          type: "text",
+          label: "GitHub Username",
+          showIf: { userType: "contributor" },
+          validation: [{ rule: "required", message: "GitHub username required" }],
+        },
+        {
+          name: "inviteCode",
+          type: "text",
+          label: "Invite Code",
+          showIf: { userType: "member" },
+          validation: [{ rule: "required", message: "Invite code required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+
+      // Select contributor - only githubUsername should be validated
+      vorm.formData.userType = "contributor";
+      vorm.formData.githubUsername = "octocat";
+
+      const isValid = await vorm.validate();
+
+      // Should be valid - inviteCode is hidden and should not block
+      expect(isValid).toBe(true);
+      expect(vorm.errors.githubUsername).toBeNull();
+      expect(vorm.errors.inviteCode).toBeNull();
+    });
+
+    it("should re-validate when switching between conditions", async () => {
+      const schema: VormSchema = [
+        {
+          name: "userType",
+          type: "select",
+          label: "User Type",
+          validation: [{ rule: "required" }],
+        },
+        {
+          name: "githubUsername",
+          type: "text",
+          label: "GitHub Username",
+          showIf: { userType: "contributor" },
+          validation: [{ rule: "required", message: "GitHub username required" }],
+        },
+        {
+          name: "inviteCode",
+          type: "text",
+          label: "Invite Code",
+          showIf: { userType: "member" },
+          validation: [{ rule: "required", message: "Invite code required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+
+      // Start as contributor with valid data
+      vorm.formData.userType = "contributor";
+      vorm.formData.githubUsername = "octocat";
+
+      let isValid = await vorm.validate();
+      expect(isValid).toBe(true);
+
+      // Switch to member - now inviteCode is required
+      vorm.formData.userType = "member";
+
+      // Wait for watcher
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      isValid = await vorm.validate();
+      expect(isValid).toBe(false);
+      expect(vorm.errors.inviteCode).toBe("Invite code required");
+      // githubUsername error should be cleared (it's now hidden)
+      expect(vorm.errors.githubUsername).toBeNull();
+    });
+
+    it("isValid should only consider visible fields", async () => {
+      const schema: VormSchema = [
+        {
+          name: "name",
+          type: "text",
+          label: "Name",
+          validation: [{ rule: "required" }],
+        },
+        {
+          name: "hiddenField",
+          type: "text",
+          label: "Hidden",
+          showIf: { name: "show-hidden" }, // Only visible if name is "show-hidden"
+          validation: [{ rule: "required", message: "Hidden field required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.formData.name = "John"; // hiddenField is hidden
+
+      await vorm.validate();
+
+      // Form should be valid - only "name" is visible and it has a value
+      expect(vorm.isValid.value).toBe(true);
+    });
+
+    it("validateFieldByName should skip hidden fields", async () => {
+      const schema: VormSchema = [
+        {
+          name: "showExtra",
+          type: "checkbox",
+          label: "Show Extra",
+        },
+        {
+          name: "extraField",
+          type: "text",
+          label: "Extra",
+          showIf: (formData) => formData.showExtra === true,
+          validation: [{ rule: "required", message: "Extra required" }],
+        },
+      ];
+
+      const vorm = useVorm(schema);
+      vorm.formData.showExtra = false; // extraField is hidden
+
+      await vorm.validateFieldByName("extraField");
+
+      // Should not have an error because field is hidden
+      expect(vorm.errors.extraField).toBeNull();
+      expect(vorm.validatedFields.extraField).toBe(true);
+    });
+  });
 });

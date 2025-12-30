@@ -1,5 +1,5 @@
 import { reactive, provide, watch, watchEffect, toRaw, computed, type InjectionKey, type ComputedRef } from "vue";
-import type { VormSchema, ValidationMode, Option } from "../types/schemaTypes";
+import type { VormSchema, ValidationMode, Option, VormFieldSchema } from "../types/schemaTypes";
 import type { VormI18n, ErrorData } from "../types/i18nTypes";
 import type { FormContext } from "../types/contextTypes";
 import { validateFieldAsyncInternal } from "../core/validatorEngine";
@@ -8,11 +8,39 @@ import {
   compileField,
   type CompiledValidator,
 } from "../core/validatorCompiler.js";
-import { getValueByPath, setValueByPath } from "../utils/pathHelpers.js";
+import { getValueByPath, setValueByPath, resolveRelativePath } from "../utils/pathHelpers.js";
 import { isFieldInSchema } from "../utils/isFieldInSchema.js";
 import { expandSchema } from "../utils/expandSchema.js";
 import { resolveMessage } from "../i18n/messageResolver.js";
 import { resolveReactiveOptions, resolveReactiveBoolean } from "../utils/reactiveResolver.js";
+
+/**
+ * Check if a field should be visible based on its showIf condition
+ */
+function isFieldVisible(
+  field: VormFieldSchema,
+  formData: Record<string, unknown>
+): boolean {
+  const condition = field.showIf;
+  if (!condition) return true;
+
+  const path = field.name;
+
+  if (typeof condition === "function") {
+    return condition(formData, path);
+  }
+
+  if (typeof condition === "object" && "dependsOn" in condition) {
+    const relativePath = resolveRelativePath(path, condition.dependsOn);
+    const value = getValueByPath(formData, relativePath);
+    return condition.condition(value, formData, path);
+  }
+
+  // Simple object match: { key: value }
+  return Object.entries(condition).every(
+    ([key, val]) => formData[key] === val
+  );
+}
 
 export interface VormContext {
   schema: VormSchema;
@@ -150,17 +178,22 @@ export function useVorm(
   });
 
   // Computed form-level flags for better DX
+  // Only considers visible fields (fields whose showIf condition returns true)
   isValid = computed(() => {
-    const errorValues = Object.values(errors);
-    const validatedValues = Object.values(validatedFields);
+    // Get only visible field names
+    const visibleFieldNames = schema
+      .filter((field) => isFieldVisible(field, formData))
+      .map((field) => field.name);
+
     // Form is only valid if:
-    // 1. It has fields
-    // 2. All fields have been validated
-    // 3. All errors are null
+    // 1. It has visible fields
+    // 2. All visible fields have been validated
+    // 3. All visible fields have no errors
+    // Note: Fields without validation rules are considered validated by default (set in schema init)
     return (
-      errorValues.length > 0 &&
-      validatedValues.every(v => v === true) &&
-      errorValues.every(e => e === null)
+      visibleFieldNames.length > 0 &&
+      visibleFieldNames.every((name) => validatedFields[name] === true) &&
+      visibleFieldNames.every((name) => errors[name] === null)
     );
   });
   isDirty = computed(() => Object.values(dirty).some(d => d === true));
@@ -201,6 +234,26 @@ export function useVorm(
     () => schema,
     (newSchema) => {
       syncSchema(newSchema);
+    },
+    { deep: true }
+  );
+
+  // Watch formData to clear errors when fields become hidden
+  // This ensures that when a showIf condition changes, hidden fields don't block form submission
+  watch(
+    () => formData,
+    () => {
+      for (const field of schema) {
+        if (!isFieldVisible(field, formData)) {
+          // Clear errors and mark as validated for hidden fields
+          if (errorData[field.name] !== null) {
+            errorData[field.name] = null;
+          }
+          if (!validatedFields[field.name]) {
+            validatedFields[field.name] = true;
+          }
+        }
+      }
     },
     { deep: true }
   );
@@ -376,6 +429,7 @@ export function useVorm(
 
   /**
    * Complete form validation function
+   * Only validates visible fields (fields whose showIf condition returns true)
    */
   async function validate(): Promise<boolean> {
     const raw = toRaw(formData);
@@ -386,6 +440,15 @@ export function useVorm(
 
     const validations = schema.map(async (field) => {
       const name = field.name;
+
+      // Skip validation for hidden fields
+      if (!isFieldVisible(field, raw)) {
+        // Clear any existing error for hidden fields
+        tempErrors[name] = null;
+        tempValidated[name] = true;
+        return true;
+      }
+
       const value = raw[name];
       const validators = compiledValidators.get(name) || [];
 
@@ -438,6 +501,7 @@ export function useVorm(
 
   /**
    * Validate a specific field by name
+   * Skips validation for hidden fields (fields whose showIf condition returns false)
    * @param fieldName - The name of the field to validate
    * @returns A promise that resolves when the field is validated
    */
@@ -446,6 +510,14 @@ export function useVorm(
     const expandedSchema = expandSchema(schema, formData);
     const field = expandedSchema.find((f) => f.name === fieldName);
     if (field) {
+      // Skip validation for hidden fields
+      if (!isFieldVisible(field, formData)) {
+        // Clear any existing error for hidden fields
+        errorData[field.name] = null;
+        validatedFields[field.name] = true;
+        return;
+      }
+
       touched[field.name] = true;
       const error = await validateFieldAsyncInternal(field, formData, errorData);
       errorData[field.name] = error;
@@ -458,7 +530,7 @@ export function useVorm(
         if (affects?.length) {
           for (const dep of affects) {
             const depField = expandedSchema.find((f) => f.name === dep);
-            if (depField) {
+            if (depField && isFieldVisible(depField, formData)) {
               const depError = await validateFieldAsyncInternal(depField, formData, errorData);
               errorData[dep] = depError;
             }
