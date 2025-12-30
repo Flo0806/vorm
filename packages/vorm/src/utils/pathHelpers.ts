@@ -74,3 +74,29 @@ export function extractRepeaterIndexes(
   }
   return result;
 }
+
+/**
+ * Resolve a relative path from a base path (for showIf dependsOn)
+ * Supports ".." to go up one level
+ * Example: resolveRelativePath("projects[0].url", "../name") => "projects[0].name"
+ */
+export function resolveRelativePath(basePath: string, relative: string): string {
+  const baseParts = basePath.split(/(?=\[)|\./).filter(Boolean);
+  baseParts.pop();
+  const relativeParts = relative.split("/").filter(Boolean);
+
+  const stack: string[] = [];
+  for (const part of relativeParts) {
+    if (part === "..") {
+      const last = baseParts.pop();
+      if (last?.startsWith("[") && baseParts.length) {
+        baseParts.pop();
+      }
+    } else if (part !== ".") {
+      stack.push(part);
+    }
+  }
+
+  const combined = [...baseParts, ...stack];
+  return combined.join(".").replace(/\.\[/g, "[");
+}

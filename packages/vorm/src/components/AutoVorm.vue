@@ -16,7 +16,7 @@ import {
 import { useVormContext } from "../composables/useVormContext";
 import type { VormFieldSchema } from "../types/schemaTypes";
 import { expandSchema } from "../utils/expandSchema";
-import { getValueByPath } from "../utils/pathHelpers";
+import { getValueByPath, resolveRelativePath } from "../utils/pathHelpers";
 import {
   getAncestryNames,
   normalizeFieldName,
@@ -98,30 +98,6 @@ function collectRepeaterPaths(schema: VormFieldSchema[], path = ""): string[] {
     }
   }
   return paths;
-}
-
-function resolveRelativePath(basePath: string, relative: string): string {
-  const baseParts = basePath.split(/(?=\[)|\./).filter(Boolean);
-  baseParts.pop();
-  const relativeParts = relative.split("/").filter(Boolean);
-
-  const stack: string[] = [];
-  for (const part of relativeParts) {
-    if (part === "..") {
-      const last = baseParts.pop();
-      if (last?.startsWith("[") && baseParts.length) {
-        baseParts.pop();
-      }
-    } else if (part !== ".") {
-      stack.push(part);
-    }
-  }
-
-  return [...baseParts, ...stack].reduce(
-    (acc, part) =>
-      acc + (part.startsWith("[") ? part : (acc ? "." : "") + part),
-    ""
-  );
 }
 
 function getFieldConfig(name: string): VormFieldSchema {
